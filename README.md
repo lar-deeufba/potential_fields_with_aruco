@@ -62,4 +62,4 @@ Start ROS with RViz + Gazebo
 
 Bring up - The configured ip must be the same as the robot
 
-`roslaunch ur_modern_driver ur5_bringup.launch robot_ip:=xxx.xxx.xxx.xx`
+`roslaunch ur_modern_driver ur5_bringup.launch robot_ip:=169.254.113.30`
