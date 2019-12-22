@@ -1,0 +1,6 @@
+Substitute ur5.urdf.xacro into universal_robot/ur_description/urdf folder
+Substitute ur5gripper_controllers.yaml into universal_robot/ur_gazebo/controller folder
+Substitute ur5.launch into universal_robot/ur_gazebo/launch folder
+
+Substitute controllers.yaml into universal_robot/ur5_moveit_config/config
+Substitute ur5.srdf         into universal_robot/ur5_moveit_config/config
