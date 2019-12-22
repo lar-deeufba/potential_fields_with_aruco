@@ -52,7 +52,7 @@ Disable firewall
 
 Set up a static IP on UR5 according to the following figure
 
-![IP Config UR5](https://github.com/caiobarrosv/Projeto_ICAR_2019/blob/master/imgs/config.jpg)
+![config](https://user-images.githubusercontent.com/28100951/71323978-2ca7d380-24b8-11ea-954c-940b009cfd93.jpg)
 
 Set up a connection on Ubuntu according to the following figure
 
