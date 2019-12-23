@@ -32,7 +32,7 @@ rosdep install --from-paths src --ignore-src -r -y
 
 ## Changes in universal_robot pkg
 
-Please substitute the following files into the universal_robot package for compliance with Artificial Potential Field method
+If you prefer to download Universal_robot package from its original repository please substitute the following files for compliance with the proposed Artificial Potential Field method
 
 Substitute src/files_to_substitute/ur5.urdf.xacro into universal_robot/ur_description/urdf folder
 Substitute src/files_to_substitute/ur5gripper_controllers.yaml into universal_robot/ur_gazebo/controller folder
