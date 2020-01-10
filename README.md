@@ -1,9 +1,9 @@
 ## Projet - Artificial Potential Field with ArUco Marker
 
 ## Usage
-### To use UR5 with RVIZ + gazebo
+### This branch was created to test speed control. According to the ur_modern_driver repository, velocity control reacts much faster than position control and is recommended for visual servoing. The next commands will show you what it takes for velocity control to work.
 
-To bring up the simulated robot in Gazebo, run:
+The ur5.launch was modified to not start gazebo while velocity command is still being tested.
 
 `roslaunch ur_gazebo ur5.launch`
 
@@ -15,51 +15,19 @@ In order to start RViz with a configuration including the MoveIt! Motion Plannin
 
 `roslaunch ur5_moveit_config moveit_rviz.launch config:=true`
 
-Run the node corresponding to the file UR5_CPA_Gazebo.py
-Use --h argument in order to get help
+Start the ur modern drive with URSIM (3.9.1 version) - Remember to set DHCP and check the ip in the terminal. The standard IP is 127.0.1.1
 
-`rosrun custom_codes UR5_CPA_Gazebo.py`
+`roslaunch ur_modern_driver ur5_ros_control.launch robot_ip:=127.0.1.1`
 
-## Required packages
+Before running the next command, check if joint_group_vel_controller is running by calling:
 
-- Moveit Kinetic [https://moveit.ros.org/install/]
-- Robotiq Gripper [https://github.com/crigroup/robotiq]
-- Universal Robot [https://github.com/ros-industrial/universal_robot]
-- Ur_modern_driver [https://github.com/ros-industrial/ur_modern_driver/tree/kinetic-devel]
+`rosservice call /controller_manager/list_controllers`
 
-Install any dependencies you might have missed by using this command in catkin_ws folder
-rosdep install --from-paths src --ignore-src -r -y
+Start the command_vel node in order to check if velocity control is working properly.
 
-## Changes in universal_robot pkg
+`rosrun custom_codes command_vel.py`
 
-If you prefer to download Universal_robot package from its original repository please substitute the following files for compliance with the proposed Artificial Potential Field method
 
-Substitute src/files_to_substitute/ur5.urdf.xacro into universal_robot/ur_description/urdf folder
-Substitute src/files_to_substitute/ur5gripper_controllers.yaml into universal_robot/ur_gazebo/controller folder
-Substitute src/files_to_substitute/ur5.launch into universal_robot/ur_gazebo/launch folder
-Substitute src/files_to_substitute/controllers.yaml into universal_robot/ur5_moveit_config/config
-Substitute src/files_to_substitute/ur5.srdf into universal_robot/ur5_moveit_config/config
+## Info
 
-## How to connect to the real UR5 robot
-
-Firstly check the machine IP. The IP configured on the robot must have the last digit different.
-
-`ifconfig`
-
-Disable firewall
-
-`sudo ufw disable`
-
-Set up a static IP on UR5 according to the following figure
-
-![config](https://user-images.githubusercontent.com/28100951/71323978-2ca7d380-24b8-11ea-954c-940b009cfd93.jpg)
-
-Set up a connection on Ubuntu according to the following figure
-
-![config_ethernet2](https://user-images.githubusercontent.com/28100951/71323962-fe29f880-24b7-11ea-86dc-756729932de4.jpg)
-
-Start ROS with RViz + Gazebo
-
-Bring up - The configured ip must be the same as the robot
-
-`roslaunch ur_modern_driver ur5_bringup.launch robot_ip:=169.254.113.30`
+In order see more info please go into the master branch
