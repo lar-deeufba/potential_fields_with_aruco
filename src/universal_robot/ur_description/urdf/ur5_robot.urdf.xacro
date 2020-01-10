@@ -2,6 +2,8 @@
 <robot xmlns:xacro="http://wiki.ros.org/xacro"
        name="ur5" >
 
+  <xacro:arg name="transmission_hw_interface" default="hardware_interface/PositionJointInterface"/>
+
   <!-- common stuff -->
   <xacro:include filename="$(find ur_description)/urdf/common.gazebo.xacro" />
 
@@ -9,13 +11,25 @@
   <xacro:include filename="$(find ur_description)/urdf/ur5.urdf.xacro" />
 
   <!-- arm -->
-  <xacro:ur5_robot prefix="" joint_limited="false"/>
+  <xacro:ur5_robot prefix="" joint_limited="false"
+    transmission_hw_interface="$(arg transmission_hw_interface)"
+  />
 
   <link name="world" />
 
   <joint name="world_joint" type="fixed">
     <parent link="world" />
     <child link = "base_link" />
+    <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0" />
+  </joint>
+
+  <!-- Added by us to integrate the frame from the Intel D435 Realsense -->
+
+  <link name="d435_realsense" />
+
+  <joint name="wrist3_camera" type="fixed">
+    <parent link="wrist_3_link" />
+    <child link = "d435_realsense" />
     <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0" />
   </joint>
 
