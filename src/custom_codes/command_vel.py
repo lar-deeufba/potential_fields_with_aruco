@@ -57,11 +57,21 @@ class vel_control:
         self.new_msg = False
         self.msg = None
 
+        # CPA Parameters
+        self.diam_goal = 0.05
+
         # Topic used to publish vel commands
         self.pub_vel = rospy.Publisher('/joint_group_vel_controller/command', Float64MultiArray,  queue_size=10)
 
-        # Topic used to read joint values
+        # visual tools from moveit
+        self.scene = PlanningSceneInterface("base_link")
+        self.marker_publisher = rospy.Publisher('visualization_marker2', Marker, queue_size=10)
+
+        # Subscriber used to read joint values
         rospy.Subscriber('/joint_states', JointState, self.ur5_actual_position, queue_size=10)
+
+        # Subscriber used to receive goal coordinates from publish_dynamic_goal.py
+        rospy.Subscriber('/dynamic_goal', Point, self.get_goal_coordinates, queue_size=10)
 
         # actionClient used to send joint positions
         self.client = actionlib.SimpleActionClient('pos_based_pos_traj_controller/follow_joint_trajectory', FollowJointTrajectoryAction)
@@ -78,10 +88,6 @@ class vel_control:
                                             'elbow_joint', 'wrist_1_joint', 'wrist_2_joint',
                                             'wrist_3_joint']
 
-        # visual tools from moveit
-        self.scene = PlanningSceneInterface("base_link")
-        self.marker_publisher = rospy.Publisher('visualization_marker2', Marker, queue_size=10)
-
         # TF transformations
         self.tf = TransformListener()
 
@@ -93,6 +99,10 @@ class vel_control:
         self.th3, self.th2, self.th1, self.th4, self.th5, self.th6 = joint_values_from_ur5.position
         self.actual_position = [self.th1, self.th2, self.th3, self.th4, self.th5, self.th6]
         # rospy.loginfo(self.actual_position)
+
+    def get_goal_coordinates(self, goal_coordinates):
+        self.ptFinal = [goal_coordinates.x, goal_coordinates.y, goal_coordinates.z]
+        self.add_sphere(self.ptFinal, self.diam_goal, ColorRGBA(0.0, 1.0, 0.0, 1.0))
 
     def stop_robot(self):
         # Set zero velocity in order to keep the robot in last calculated position
@@ -201,16 +211,14 @@ class vel_control:
 
         return np.transpose(joint_att_force_p), np.transpose(joint_att_force_w)
 
-    def CPA_vel_control(self, ptFinal, AAPF_COMP = False, ORI_COMP = False):
+    def CPA_vel_control(self, AAPF_COMP = False, ORI_COMP = False):
 
         # Final position
         Displacement = [0.01, 0.01, 0.01]
-        self.ptFinal = ptFinal
 
         # CPA Parameters
-        diam_goal = 0.05
         diam_obs = 0.3 # still need to update this parameter accondinly to real time control
-        err = diam_goal / 2  # Max error allowed
+        err = self.diam_goal / 2  # Max error allowed
         max_iter = 1500  # Max iterations
         zeta = [0.5 for i in range(7)]  # Attractive force gain of each obstacle
         rho_0 = diam_obs / 2  # Influence distance of each obstacle
@@ -237,7 +245,6 @@ class vel_control:
         raw_input("' =========== Press enter to load the visual tools")
         self.scene.clear()
         # Final positions
-        self.add_sphere(self.ptFinal, diam_goal, ColorRGBA(0.0, 1.0, 0.0, 1.0))
 
         # Angle correction relative to base_link (from grasping_link)
         R, P, Y = 1.5707, 0, -1.5707
@@ -307,8 +314,8 @@ if __name__ == '__main__':
         '''
         rosservice.call_service('/controller_manager/switch_controller', [['joint_group_vel_controller'], ['pos_based_pos_traj_controller'], 1])
         rospy.on_shutdown(ur5_vel.stop_robot)
-        ptFinal = [-0.4, 0.2, 0.75]
-        ur5_vel.CPA_vel_control(ptFinal)
+        # ptFinal = [-0.4, 0.2, 0.75]
+        ur5_vel.CPA_vel_control()
 
         '''
         Velocity Control Test

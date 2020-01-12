@@ -15,7 +15,8 @@ In order to start RViz with a configuration including the MoveIt! Motion Plannin
 
 `roslaunch ur5_moveit_config moveit_rviz.launch config:=true`
 
-Start the ur modern drive with URSIM (3.9.1 version) - Remember to set DHCP and check the ip in the terminal. The standard IP is 127.0.1.1
+Start the ur modern drive to connect with URSIM (3.9.1 version) - Remember to set DHCP and check the ip in the terminal. The standard IP is 127.0.1.1
+(you should start UR-SIM before launch ur5_ros_contro.launch)
 
 `roslaunch ur_modern_driver ur5_ros_control.launch robot_ip:=127.0.1.1`
 
@@ -27,6 +28,13 @@ Start the command_vel node in order to check if velocity control is working prop
 
 `rosrun custom_codes command_vel.py`
 
+## Test velocity control
+
+In order to test velocity control, run all the commands above and then run the following command:
+
+`rosrun cust_codes publish_dynamic_goal.py`
+
+This node is responsible for dynamically publishing the goal coordinates 
 
 ## Info
 
