@@ -1,6 +1,6 @@
 ## Projet - Artificial Potential Field with ArUco Marker
 
-## Usage
+## Test Velocity Control (Usage)
 ### This branch was created to test speed control. According to the ur_modern_driver repository, velocity control reacts much faster than position control and is recommended for visual servoing. The next commands will show you what it takes for velocity control to work.
 
 The ur5.launch was modified to not start gazebo while velocity command is still being tested.
@@ -15,8 +15,7 @@ In order to start RViz with a configuration including the MoveIt! Motion Plannin
 
 `roslaunch ur5_moveit_config moveit_rviz.launch config:=true`
 
-Start the ur modern drive to connect with URSIM (3.9.1 version) - Remember to set DHCP and check the ip in the terminal. The standard IP is 127.0.1.1
-(you should start UR-SIM before launch ur5_ros_contro.launch)
+Start the ur modern drive to connect with URSIM (3.9.1 version) - Remember to set DHCP and check the ip in the terminal. The standard IP is 127.0.1.1 (you should start UR-SIM before launch ur5_ros_contro.launch)
 
 `roslaunch ur_modern_driver ur5_ros_control.launch robot_ip:=127.0.1.1`
 
@@ -28,14 +27,29 @@ Start the command_vel node in order to check if velocity control is working prop
 
 `rosrun custom_codes command_vel.py`
 
-## Test velocity control
+First run kinect driver
+`rosrun kinect2_bridge kinect2_bridge depth_method:=opengl reg_method:=cpu`
 
-In order to test velocity control, run all the commands above and then run the following command:
+### Test Computer Vision Tools (Kinect)
 
-`rosrun cust_codes publish_dynamic_goal.py`
+Launch kinect driver using iai_kinect2 package
 
-This node is responsible for dynamically publishing the goal coordinates 
+`roslaunch kinect2_bridge kinect2_bridge.launch depth_method:=opengl reg_method:=cpu`
 
-## Info
+Launch ar_track_alvar
+
+`roslaunch ar_track_alvar pr2_indiv_no_kinect_caio.launch`
+
+Load the Kinect2 TF Frame
+
+`roslaunch custom_codes tf_transforms.launch`
+
+### Connect with real UR5
+
+Use the following command in order to connect with real UR5
+
+`roslaunch ur_modern_driver ur5_bringup.launch robot_ip:=192.168.131.12`
+
+### Info
 
 In order see more info please go into the master branch
