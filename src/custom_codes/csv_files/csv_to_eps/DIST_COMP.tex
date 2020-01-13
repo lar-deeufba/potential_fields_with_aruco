@@ -1,0 +1,76 @@
+\documentclass[margin=5mm]{article}
+%%%<
+% \usepackage{verbatim}
+% Example data
+% pdflatex --shell-escape -synctex=1 -interaction=nonstopmode %.tex-
+\usepackage{pgfplots}
+\usepackage{subfigure}
+\usepackage{tikz}
+\pgfplotsset{width=8.8cm,compat=newest}
+%\usepackage{caption}
+%\usepackage{graphicx}
+%\usepackage{subfigure}
+
+\usetikzlibrary{external} 
+\tikzexternalize[prefix=tikz/att_forces/]
+
+\tikzset{external/system call={pdflatex \tikzexternalcheckshellescape 
+		-halt-on-error 
+		-interaction=batchmode 
+		-jobname "\image" "\texsource" 
+		&& pdftops -eps "\image.pdf"}} 
+%\tikzexternalize[shell escape=-enable-write18] 
+
+\begin{document}
+
+%%%%%%%%%%%%%%%%
+% DISTANCE TO GOAL
+%%%%%%%%%%%%%%%%
+
+\begin{figure}[b]
+%\begin{subfigure}
+    \centering
+%   \begin{minipage}[b]{0.48\textwidth}
+    \begin{tikzpicture}
+     \pgfplotstableread{csv_files/COMP_dist_to_goal.csv}{\Data}
+     \begin{axis}[
+         title={Distance from initial position to the goal},
+         title style={at={(0.5,1.15)}, anchor=north},
+         xlabel={Samples},
+         xlabel style={at={(0.5,-0.35)}, anchor=south},
+         ylabel={Distance [m]},
+         height = 4cm,
+         width = 8.8cm,
+         xmin=0, xmax=1500,
+         ymin=0, ymax=0.7,
+         xtick distance={400},
+         ytick distance={0.1},
+         ymajorgrids=true,
+         grid style=dashed,
+         legend style={at={(0.5,0.95)}, anchor=north,legend columns=-1}
+    ]
+    \addplot[
+    color=red,
+    % mark=square,
+    ] table [x = Index, y = dist_to_goal_AAPF_OriON] {\Data};
+    \addlegendentry{\tiny AAPF};
+    \addplot[
+    color=green,
+    ] table [x = Index, y = dist_to_goal_APF_OriON] {\Data};
+    \addlegendentry{\tiny APF}
+    \addplot[
+    color=blue,
+    ] table [x = Index, y = dist_to_goal_AAPF_OriOFF] {\Data};
+    \addlegendentry{\tiny AAPF Ori. OFF}
+        
+\end{axis}
+\end{tikzpicture}
+% \caption{Joint angles using AAPF}
+%\end{subfigure}
+%\caption{Comparison of the distance from UR5 end effector to the goal using APF and AAPF}
+%\label{fig: APF_AAPF_distance}
+\end{figure}
+
+
+
+\end{document}

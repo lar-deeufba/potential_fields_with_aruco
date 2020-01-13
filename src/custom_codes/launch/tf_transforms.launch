@@ -1,0 +1,11 @@
+<launch>
+	<!-- static_transform_publisher x y z yaw pitch roll frame_id child_frame_id period_in_ms
+       -1.8143 is igual to -1.57-0.244346, that is = 90deg + 14deg (support angle)  -->
+
+  <!-- <node pkg="tf" type="static_transform_publisher" name="realsense_link_broadcaster"
+        args="0 -0.045 0.2 0 0 -1.8143 /wrist_2_link /kinect2_link 10" /> -->
+
+	<!-- The rotation is performed about its own frame -->
+	<node pkg="tf" type="static_transform_publisher" name="realsense_link_broadcaster"
+        args="-0.1 0.0 0.7 1.57 0.0 -1.57 /base_link /kinect2_link 40" />
+</launch>
