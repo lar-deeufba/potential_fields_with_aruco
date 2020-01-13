@@ -23,12 +23,13 @@ Before running the next command, check if joint_group_vel_controller is running 
 
 `rosservice call /controller_manager/list_controllers`
 
-Start the command_vel node in order to check if velocity control is working properly.
+Start the command_vel node in order to check if velocity control is working properly (check arguments)
 
 `rosrun custom_codes command_vel.py`
 
-First run kinect driver
-`rosrun kinect2_bridge kinect2_bridge depth_method:=opengl reg_method:=cpu`
+If you want to test velocity control with a dynamic goal published by a node (without Kinect), first run this node before command_vel.py and then run command_vel.py with --dyntest argument.
+
+`rosrun custom_codes publish_dynamic_goal.py`
 
 ### Test Computer Vision Tools (Kinect)
 
@@ -44,12 +45,14 @@ Load the Kinect2 TF Frame
 
 `roslaunch custom_codes tf_transforms.launch`
 
+Remember to run command_vel node with --armarker argument 
+
 ### Connect with real UR5
 
 Use the following command in order to connect with real UR5
 
 `roslaunch ur_modern_driver ur5_bringup.launch robot_ip:=192.168.131.12`
 
-### Info
+## Info
 
 In order see more info please go into the master branch
