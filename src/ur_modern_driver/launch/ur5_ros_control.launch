@@ -17,8 +17,8 @@
   <arg name="base_frame" default="$(arg prefix)base" />
   <arg name="tool_frame" default="$(arg prefix)tool0_controller" />
   <arg name="shutdown_on_disconnect" default="true" />
-  <arg name="controllers" default="joint_state_controller force_torque_sensor_controller joint_group_vel_controller"/>
-  <arg name="stopped_controllers" default="pos_based_pos_traj_controller vel_based_pos_traj_controller "/>
+  <arg name="controllers" default="joint_state_controller force_torque_sensor_controller pos_based_pos_traj_controller"/>
+  <arg name="stopped_controllers" default="joint_group_vel_controller vel_based_pos_traj_controller "/>
   <!-- robot model -->
   <include file="$(find ur_description)/launch/ur5_upload.launch">
     <arg name="limited" value="$(arg limited)"/>

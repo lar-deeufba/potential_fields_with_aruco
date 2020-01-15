@@ -419,7 +419,7 @@ class MoveGroupPythonIntefaceTutorial(object):
                     self.joint_states.position[i] = self.joint_states.position[i] + \
                         alfa * list[j][i]
 
-            matrix = self.matrix_from_joint_angles()
+            # matrix = self.matrix_from_joint_angles()
 
             # Get current position of grasping_link
             ptAtual = get_ur5_position(self.ur5_param, self.joint_states.position, "grasping_link")

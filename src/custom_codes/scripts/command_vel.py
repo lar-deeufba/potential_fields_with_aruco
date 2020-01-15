@@ -129,7 +129,7 @@ class vel_control:
 
         # First point is current position
         try:
-            self.goal.trajectory.points.append(JointTrajectoryPoint(positions=home_pos, velocities=[0]*6, time_from_start=rospy.Duration(2)))
+            self.goal.trajectory.points.append(JointTrajectoryPoint(positions=home_pos, velocities=[0]*6, time_from_start=rospy.Duration(4)))
             self.client.send_goal(self.goal)
             self.client.wait_for_result()
             rospy.sleep(3)
@@ -216,7 +216,7 @@ class vel_control:
 
     def CPA_vel_control(self, AAPF_COMP = False, ORI_COMP = False):
 
-        # Final position
+        # Final position - Orientation only
         Displacement = [0.01, 0.01, 0.01]
 
         # CPA Parameters
@@ -227,7 +227,7 @@ class vel_control:
         rho_0 = diam_obs / 2  # Influence distance of each obstacle
         dist_att = 0.05  # Influence distance in workspace
         dist_att_config = 0.2  # Influence distance in configuration space
-        alfa = 4  # Grad step of positioning - Default: 0.5
+        alfa = 2  # Grad step of positioning - Default: 0.5
         alfa_rot = 0.05  # Grad step of orientation - Default: 0.4
         CP_ur5_rep = [0.15]*6  # Repulsive fields on UR5
         CP_ur5_rep[-2] = 0.15
@@ -246,6 +246,7 @@ class vel_control:
             try:
                 # used when Ar Marker is ON
                 ptFinal, _ = self.tf.lookupTransform("base_link", "ar_marker_0", rospy.Time())
+                rospy.loginfo(ptFinal)
             except:
                 if not rospy.is_shutdown():
                     raw_input("Put the marker in front of cam and press enter after it is known!")
@@ -257,10 +258,9 @@ class vel_control:
         print("Dist to goal: " + str(dist_EOF_to_Goal))
 
         self.scene.clear()
+
         # Angle correction relative to base_link (from grasping_link)
         R, P, Y = 1.5707, 0, -1.5707
-
-        n = 0
         err_ori = 1
         corr = [R, P, Y]
 
@@ -287,6 +287,12 @@ class vel_control:
                                      eta, rho_0, dist_att, dist_att_config)
 
             self.joint_vels.data = np.array(alfa * joint_att_force_p[0])
+
+            # If orientation control is turned on, sum actual position forces to orientation forces
+            # if args.OriON or ORI_COMP:
+            #     self.joint_vels.data = self.joint_vels.data + \
+            #         alfa_rot * joint_att_force_w[0]
+
             self.pub_vel.publish(self.joint_vels)
 
             if self.args.armarker:
@@ -296,8 +302,7 @@ class vel_control:
                     self.add_sphere(ptFinal, self.diam_goal, ColorRGBA(0.0, 1.0, 0.0, 1.0))
                 except:
                     if not rospy.is_shutdown():
-                        self.joint_vels.data = np.array([0, 0, 0, 0, 0, 0])
-                        self.pub_vel.publish(self.joint_vels)
+                        self.stop_robot():
                         raw_input("Put the marker in front of cam and press enter after it is known!")
                         self.CPA_vel_control()
             elif self.args.dyntest:
@@ -309,7 +314,6 @@ class vel_control:
             err_ori = np.sum(oriAtual)
 
             dist_EOF_to_Goal = np.linalg.norm(ptAtual - np.asarray(ptFinal))
-            rospy.loginfo(ptFinal)
 
             rate.sleep()
 
@@ -322,22 +326,21 @@ if __name__ == '__main__':
         '''
         rosservice.call_service('/controller_manager/switch_controller', [['pos_based_pos_traj_controller'], ['joint_group_vel_controller'], 1])
         ur5_vel = vel_control(arg)
+        raw_input("Press enter to load home position!")
         ur5_vel.home_pos()
-
-        '''
-        APF test
-        '''
-        rosservice.call_service('/controller_manager/switch_controller', [['joint_group_vel_controller'], ['pos_based_pos_traj_controller'], 1])
-        rospy.on_shutdown(ur5_vel.stop_robot)
-        # ptFinal = [-0.4, 0.2, 0.75]
-        ur5_vel.CPA_vel_control()
 
         '''
         Velocity Control Test
         '''
-        raw_input("Press enter to load velocity control!")
-        ur5_vel.velocity_control_test()
+        rosservice.call_service('/controller_manager/switch_controller', [['joint_group_vel_controller'], ['pos_based_pos_traj_controller'], 1])
+        rospy.on_shutdown(ur5_vel.stop_robot)
+        ur5_vel.CPA_vel_control()
 
+        # '''
+        # Velocity Control Test
+        # '''
+        # raw_input("Press enter to load velocity control!")
+        # ur5_vel.velocity_control_test()
 
     except rospy.ROSInterruptException:
 	    rospy.loginfo("Program interrupted before completion")

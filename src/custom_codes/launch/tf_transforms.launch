@@ -6,6 +6,9 @@
         args="0 -0.045 0.2 0 0 -1.8143 /wrist_2_link /kinect2_link 10" /> -->
 
 	<!-- The rotation is performed about its own frame -->
-	<node pkg="tf" type="static_transform_publisher" name="realsense_link_broadcaster"
-        args="-0.1 0.0 0.7 1.57 0.0 -1.57 /base_link /kinect2_link 40" />
+	<!-- <node pkg="tf" type="static_transform_publisher" name="realsense_link_broadcaster"
+        args="-0.1 0.0 0.7 1.57 0.0 -1.57 /base_link /kinect2_link 40" /> -->
+
+	<node pkg="tf" type="static_transform_publisher" name="kinect2_link_"
+	      args="-0.04d 0.3 0.48 1.57 0.0 -1.57 /base_link /kinect2_link 40" />
 </launch>
