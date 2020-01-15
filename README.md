@@ -1,7 +1,10 @@
-## Projet - Artificial Potential Field with ArUco Marker
+## Project - Artificial Potential Field with ArUco Marker
+
+## Description
+
+This branch was created to test speed control. According to the ur_modern_driver repository, velocity control reacts much faster than position control and is recommended for visual servoing. The next commands will show you what it takes for velocity control to work.
 
 ## Test Velocity Control (Usage)
-### This branch was created to test speed control. According to the ur_modern_driver repository, velocity control reacts much faster than position control and is recommended for visual servoing. The next commands will show you what it takes for velocity control to work.
 
 The ur5.launch was modified to not start gazebo while velocity command is still being tested.
 
@@ -31,9 +34,10 @@ If you want to test velocity control with a dynamic goal published by a node (wi
 
 `rosrun custom_codes publish_dynamic_goal.py`
 
-### Test Computer Vision Tools (Kinect)
+## Test Computer Vision Tools (Kinect)
 
 Launch kinect driver using iai_kinect2 package
+Please follow the instruction of iai_kinect2 installation in its default repository [https://github.com/code-iai/iai_kinect2]
 
 `roslaunch kinect2_bridge kinect2_bridge.launch depth_method:=opengl reg_method:=cpu`
 
@@ -43,16 +47,37 @@ Launch ar_track_alvar
 
 Load the Kinect2 TF Frame
 
-`roslaunch custom_codes tf_transforms.launch`
+`roslaunch custom_codes tf_transforms.launch kinect2_test:=true`
 
-Remember to run command_vel node with --armarker argument 
+Remember to run command_vel node with --armarker argument
 
-### Connect with real UR5
+## Connect with real UR5
 
-Use the following command in order to connect with real UR5
+Use the following command in order to connect with real UR5.
+If you are using velocity control, do not use bring_up. Use ur5_ros_control instead.
 
-`roslaunch ur_modern_driver ur5_bringup.launch robot_ip:=192.168.131.12`
+`roslaunch ur_modern_driver ur5_ros_control.launch robot_ip:=192.168.131.12`
 
-## Info
+## How to use PC cam to track ar_tracker_alvar markers
+
+Install kinetic image pipeline
+
+`sudo apt-get install ros-kinetic-image-pipeline`
+
+Launch the TF_Broadcaster to transform the camera_link frame relative to the base_link of UR5
+
+`roslaunch custom_codes tf_transforms.launch pc_camera_test:=true`
+
+Launch the PC CAM node to publish camera_link frame
+Change `video_stream_provider` argument to '1' if an external USB CAM is used.
+
+`roslaunch custom_codes camera_pc.launch`
+
+Launch the ar_track_alvar node below
+Change the marker size (in centimeters) of the marker printed version in the launch file
+
+`roslaunch custom_codes PC_CAM_alvar.launch`
+
+### Info
 
 In order see more info please go into the master branch

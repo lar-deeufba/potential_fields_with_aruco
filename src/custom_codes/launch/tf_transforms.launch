@@ -1,6 +1,10 @@
 <launch>
+	<arg name="pc_camera_test" default="false" />
+	<arg name="kinect2_test" default="false" />
+	<arg name="fixed" default="false" />
 	<!-- static_transform_publisher x y z yaw pitch roll frame_id child_frame_id period_in_ms
        -1.8143 is igual to -1.57-0.244346, that is = 90deg + 14deg (support angle)  -->
+			 <!-- It rotates always relative to the prior frame -->
 
   <!-- <node pkg="tf" type="static_transform_publisher" name="realsense_link_broadcaster"
         args="0 -0.045 0.2 0 0 -1.8143 /wrist_2_link /kinect2_link 10" /> -->
@@ -9,6 +13,14 @@
 	<!-- <node pkg="tf" type="static_transform_publisher" name="realsense_link_broadcaster"
         args="-0.1 0.0 0.7 1.57 0.0 -1.57 /base_link /kinect2_link 40" /> -->
 
-	<node pkg="tf" type="static_transform_publisher" name="kinect2_link_"
-	      args="-0.04d 0.3 0.48 1.57 0.0 -1.57 /base_link /kinect2_link 40" />
+	<node if="$(arg pc_camera_test)" pkg="tf" type="static_transform_publisher" name="camera_link_broadcaster"
+				args="-0.04 0.3 0.48 1.57 0.0 -1.57 /base_link /camera_link 40" />
+
+	<node if="$(arg kinect2_test)" pkg="tf" type="static_transform_publisher" name="kinect2_link_broadcaster"
+        args="-0.1 0.0 0.7 1.57 0.0 -1.57 /base_link /kinect2_link 40" />
+
+	<node if="$(arg fixed)" pkg="tf" type="static_transform_publisher" name="fixed_link_broadcaster"
+	      args="-0.4 0.0 0.05 0.0 0.0 0.0 /base_link /ar_marker_0 40" />
+
+
 </launch>

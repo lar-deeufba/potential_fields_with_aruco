@@ -302,7 +302,7 @@ class vel_control:
                     self.add_sphere(ptFinal, self.diam_goal, ColorRGBA(0.0, 1.0, 0.0, 1.0))
                 except:
                     if not rospy.is_shutdown():
-                        self.stop_robot():
+                        self.stop_robot()
                         raw_input("Put the marker in front of cam and press enter after it is known!")
                         self.CPA_vel_control()
             elif self.args.dyntest:
