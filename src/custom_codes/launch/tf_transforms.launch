@@ -10,5 +10,5 @@
         args="-0.1 0.0 0.7 1.57 0.0 -1.57 /base_link /kinect2_link 40" /> -->
 
 	<node pkg="tf" type="static_transform_publisher" name="kinect2_link_"
-	      args="-0.04d 0.3 0.48 1.57 0.0 -1.57 /base_link /kinect2_link 40" />
+	      args="-0.04 0.3 0.48 1.57 0.0 -1.57 /base_link /kinect2_link 40" />
 </launch>
