@@ -1,5 +1,8 @@
 ## Projet - Artificial Potential Field with ArUco Marker
 
+## Description
+Branch to develop the forces plotting feature
+
 ## Test Velocity Control (Usage)
 ### This branch was created to test speed control. According to the ur_modern_driver repository, velocity control reacts much faster than position control and is recommended for visual servoing. The next commands will show you what it takes for velocity control to work.
 
