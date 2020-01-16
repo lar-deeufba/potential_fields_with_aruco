@@ -18,7 +18,7 @@ from std_msgs.msg import Header, ColorRGBA
 from geometry_msgs.msg import PoseStamped, Point, Vector3, Pose
 
 from tf import TransformListener
-from tf.transformations import quaternion_from_euler, euler_from_matrix #, quaternion_matrix
+from tf.transformations import euler_from_quaternion #, quaternion_matrix
 
 # import from moveit
 from moveit_python import PlanningSceneInterface
@@ -124,6 +124,7 @@ class vel_control:
             rate.sleep()
 
     def home_pos(self):
+        # home_pos = [2.7, -1.5707, 0.3, -1.5707, -1.5707, -1.5707]
         home_pos = [3.14, -1.5707, 0, -1.5707, -1.5707, -1.5707]
         # home_pos = [0.0, 0.0, 0, 0.0, 0.0, 0.0]
 
@@ -132,7 +133,7 @@ class vel_control:
             self.goal.trajectory.points.append(JointTrajectoryPoint(positions=home_pos, velocities=[0]*6, time_from_start=rospy.Duration(4)))
             self.client.send_goal(self.goal)
             self.client.wait_for_result()
-            rospy.sleep(3)
+            rospy.sleep(2)
             if self.client.get_state() == actionlib.GoalStatus.SUCCEEDED:
                 print("The arm is in home position")
             else:
@@ -227,8 +228,8 @@ class vel_control:
         rho_0 = diam_obs / 2  # Influence distance of each obstacle
         dist_att = 0.05  # Influence distance in workspace
         dist_att_config = 0.2  # Influence distance in configuration space
-        alfa = 2  # Grad step of positioning - Default: 0.5
-        alfa_rot = 0.05  # Grad step of orientation - Default: 0.4
+        alfa = 3  # Grad step of positioning - Default: 0.5
+        alfa_rot = 1  # Grad step of orientation - Default: 0.4
         CP_ur5_rep = [0.15]*6  # Repulsive fields on UR5
         CP_ur5_rep[-2] = 0.15
 
@@ -239,14 +240,23 @@ class vel_control:
         if self.args.AAPF and not self.args.OriON or (AAPF_COMP and not ORI_COMP):
             eta = [0.0006 for i in range(6)]
 
-        ptAtual, _ = self.tf.lookupTransform("base_link", "grasping_link", rospy.Time())
+        ptAtual, oriAtual = self.tf.lookupTransform("base_link", "grasping_link", rospy.Time())
+        oriAtual = euler_from_quaternion(oriAtual)
+
+        '''
+        PARA TESTE
+        '''
+        rospy.loginfo("Ori in Euler: " + str(oriAtual))
+
+        '''
+        PARA TESTE
+        '''
 
         # if true, this node receives messages from publish_dynamic_goal.py
         if self.args.armarker:
             try:
                 # used when Ar Marker is ON
                 ptFinal, _ = self.tf.lookupTransform("base_link", "ar_marker_0", rospy.Time())
-                rospy.loginfo(ptFinal)
             except:
                 if not rospy.is_shutdown():
                     raw_input("Put the marker in front of cam and press enter after it is known!")
@@ -260,7 +270,7 @@ class vel_control:
         self.scene.clear()
 
         # Angle correction relative to base_link (from grasping_link)
-        R, P, Y = 1.5707, 0, -1.5707
+        R, P, Y = 0.0, 1.2, 0
         err_ori = 1
         corr = [R, P, Y]
 
@@ -277,8 +287,9 @@ class vel_control:
             # Get UR5 Jacobian of each link
             Jacobian = get_geometric_jacobian(self.ur5_param, self.actual_position)
 
-            oriAtual = euler_from_matrix(self.matrix_from_joint_angles())
+            # Substituir ori em Roll, Pitch e Yaw
             oriAtual = [oriAtual[i] + corr[i] for i in range(len(corr))]
+            rospy.loginfo("Ori atual: " + str(oriAtual))
 
             # Get attractive linear and angular forces and repulsive forces
             joint_att_force_p, joint_att_force_w = \
@@ -289,16 +300,16 @@ class vel_control:
             self.joint_vels.data = np.array(alfa * joint_att_force_p[0])
 
             # If orientation control is turned on, sum actual position forces to orientation forces
-            # if args.OriON or ORI_COMP:
-            #     self.joint_vels.data = self.joint_vels.data + \
-            #         alfa_rot * joint_att_force_w[0]
+            if self.args.OriON or ORI_COMP:
+                self.joint_vels.data = self.joint_vels.data + \
+                    alfa_rot * joint_att_force_w[0]
 
             self.pub_vel.publish(self.joint_vels)
 
             if self.args.armarker:
                 try:
                     # used when Ar Marker is ON
-                    ptFinal, _ = self.tf.lookupTransform("base_link", "ar_marker_0", rospy.Time())
+                    ptFinal, oriAtual = self.tf.lookupTransform("base_link", "ar_marker_0", rospy.Time())
                     self.add_sphere(ptFinal, self.diam_goal, ColorRGBA(0.0, 1.0, 0.0, 1.0))
                 except:
                     if not rospy.is_shutdown():
@@ -308,10 +319,11 @@ class vel_control:
             elif self.args.dyntest:
                 ptFinal = self.ptFinal
 
-            ptAtual, _ = self.tf.lookupTransform("base_link", "grasping_link", rospy.Time())
+            ptAtual, oriAtual = self.tf.lookupTransform("base_link", "grasping_link", rospy.Time())
+            oriAtual = euler_from_quaternion(oriAtual)
 
             # Get absolute orientation error
-            err_ori = np.sum(oriAtual)
+            # err_ori = np.sum(oriAtual)
 
             dist_EOF_to_Goal = np.linalg.norm(ptAtual - np.asarray(ptFinal))
 

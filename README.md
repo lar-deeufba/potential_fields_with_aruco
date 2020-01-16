@@ -60,11 +60,16 @@ If you are using velocity control, do not use bring_up. Use ur5_ros_control inst
 
 ## How to use PC cam to track ar_tracker_alvar markers
 
+Calibrate your PC CAM using this package
+
+http://wiki.ros.org/camera_calibration/Tutorials/MonocularCalibration
+
 Install kinetic image pipeline
 
 `sudo apt-get install ros-kinetic-image-pipeline`
 
-Launch the TF_Broadcaster to transform the camera_link frame relative to the base_link of UR5
+Launch the TF_Broadcaster to transform the camera_link frame relative to the base_link of UR5.
+If you don't have a web cam available use the tf_transform launch with argument `fixed:=true` instead.
 
 `roslaunch custom_codes tf_transforms.launch pc_camera_test:=true`
 
