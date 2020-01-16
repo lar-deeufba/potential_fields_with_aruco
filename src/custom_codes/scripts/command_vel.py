@@ -29,25 +29,12 @@ from get_geometric_jacobian import *
 def parse_args():
     parser = argparse.ArgumentParser(description='AAPF_Orientation')
     # store_false assumes that variable is already true and is only set to false if is given in command terminal
-    parser.add_argument('--AAPF', action='store_true', help='Choose AAPF instead of APF')
     parser.add_argument('--armarker', action='store_true', help='Follow dynamic goal from ar_track_alvar package')
     parser.add_argument('--dyntest', action='store_true', help='Follow dynamic goal from ar_track_alvar package')
-    parser.add_argument('--APF', action='store_true', help='Choose APF instead of AAPF')
-    parser.add_argument('--OriON', action='store_true', help='Activate Orientation Control')
-    parser.add_argument('--COMP', action='store_true', help='Compares distance to goal using APF, AAPF w/ and without ori control')
-    parser.add_argument('--CSV', action='store_true', help='Write topics into a CSV file')
     # parser.add_argument('--plot', action='store_true', help='Plot path to RVIZ through publish_trajectory.py (run this node first)')
     parser.add_argument('--plotPath', action='store_true', help='Plot path to RVIZ through publish_trajectory.py (run this node first)')
-    parser.add_argument('--realUR5', action='store_true', help='Enable real UR5 controlling')
     args = parser.parse_args()
     return args
-
-def print_output(n, way_points, wayPointsSmoothed, dist_EOF_to_Goal):
-    print("Dados dos CPAAs")
-    print("Iterations: ", n)
-    print("Way points: ", len(way_points))
-    print("Way points smoothed: ", len(wayPointsSmoothed))
-    print("Distance to goal: ", dist_EOF_to_Goal)
 
 class vel_control:
     def __init__(self, args):
@@ -146,7 +133,7 @@ class vel_control:
             raise
 
     """
-    Adds the obstacles and repulsive control points on the robot
+    Adds spheres in RVIZ - Used to plot goals and obstacles
     """
 
     def add_sphere(self, pose, diam, color):
@@ -174,83 +161,33 @@ class vel_control:
     """
     Get forces from APF algorithm
     """
-    def get_joint_forces(self, ptAtual, ptFinal, oriAtual, Displacement, dist_EOF_to_Goal, Jacobian, joint_values, ur5_param, zeta, eta,
-    rho_0, dist_att, dist_att_config):
-        """
-        Get attractive and repulsive forces
-
-        :param CP_dist: [6][13] array vector corresponding to 6 joints and 13 obstacles
-        :param CP_pos: [6][3] array vector corresponding to 6 joints and 3 coordinates of each joint
-        :param obs_pos: [13][3] array vector corresponding to 13 obstacles and 3 coordinates
-        :return: attractive and repulsive forces
-        """
+    def get_joint_forces(self, ptAtual, ptFinal, dist_EOF_to_Goal, Jacobian, joint_values, ur5_param, zeta, dist_att):
 
         # Getting attractive forces
         forces_p = np.zeros((3, 1))
-        forces_w = np.zeros((3, 1))
 
         for i in range(3):
             if abs(ptAtual[i] - ptFinal[i]) <= dist_att:
                 f_att_l = -zeta[-1]*(ptAtual[i] - ptFinal[i])
             else:
                 f_att_l = -dist_att*zeta[-1]*(ptAtual[i] - ptFinal[i])/(dist_EOF_to_Goal)
-
-            if abs(oriAtual[i] - Displacement[i]) <= dist_att_config:
-                f_att_w = -zeta[-1]*(oriAtual[i] - Displacement[i])
-            else:
-                f_att_w = -dist_att_config*zeta[-1]*(oriAtual[i] - Displacement[i])/dist_EOF_to_Goal
-
             forces_p[i, 0] = f_att_l
-            forces_w[i, 0] = f_att_w
 
         forces_p = np.asarray(forces_p)
         JacobianAtt_p = np.asarray(Jacobian[5])
         joint_att_force_p = JacobianAtt_p.dot(forces_p)
         joint_att_force_p = np.multiply(joint_att_force_p, [[1], [1.5], [1.5], [1], [1], [1]])
 
-        forces_w = np.asarray(forces_w)
-        JacobianAtt_w = np.asarray(Jacobian[6])
-        joint_att_force_w = JacobianAtt_w.dot(forces_w)
-        joint_att_force_w = np.multiply(joint_att_force_w, [[0], [0], [0.05], [0.4], [0.4], [0.4]])
+        return np.transpose(joint_att_force_p)
 
-        return np.transpose(joint_att_force_p), np.transpose(joint_att_force_w)
-
-    def CPA_vel_control(self, AAPF_COMP = False, ORI_COMP = False):
-
-        # Final position - Orientation only
-        Displacement = [0.01, 0.01, 0.01]
+    def CPA_vel_control(self):
 
         # CPA Parameters
-        diam_obs = 0.3 # still need to update this parameter accondinly to real time control
-        err = self.diam_goal / 2  # Max error allowed
-        max_iter = 1500  # Max iterations
-        zeta = [0.5 for i in range(7)]  # Attractive force gain of each obstacle
-        rho_0 = diam_obs / 2  # Influence distance of each obstacle
+        zeta = [0.5 for i in range(7)]  # Attractive force gain of the goal
         dist_att = 0.05  # Influence distance in workspace
-        dist_att_config = 0.2  # Influence distance in configuration space
-        alfa = 3  # Grad step of positioning - Default: 0.5
-        alfa_rot = 1  # Grad step of orientation - Default: 0.4
-        CP_ur5_rep = [0.15]*6  # Repulsive fields on UR5
-        CP_ur5_rep[-2] = 0.15
+        alfa = 4  # Grad step of positioning - Default: 0.5
 
-        # This repulsive gain is used if AAPF is set on with orientation control
-        eta = [0.00001 for i in range(6)]  # Repulsive gain of each obstacle default: 0.00006
-
-        # This attractive gain is used if AAPF is set on WITHOUT orientation control
-        if self.args.AAPF and not self.args.OriON or (AAPF_COMP and not ORI_COMP):
-            eta = [0.0006 for i in range(6)]
-
-        ptAtual, oriAtual = self.tf.lookupTransform("base_link", "grasping_link", rospy.Time())
-        oriAtual = euler_from_quaternion(oriAtual)
-
-        '''
-        PARA TESTE
-        '''
-        rospy.loginfo("Ori in Euler: " + str(oriAtual))
-
-        '''
-        PARA TESTE
-        '''
+        ptAtual, _ = self.tf.lookupTransform("base_link", "grasping_link", rospy.Time())
 
         # if true, this node receives messages from publish_dynamic_goal.py
         if self.args.armarker:
@@ -269,47 +206,28 @@ class vel_control:
 
         self.scene.clear()
 
-        # Angle correction relative to base_link (from grasping_link)
-        R, P, Y = 0.0, 1.2, 0
-        err_ori = 1
-        corr = [R, P, Y]
-
-        joint_attractive_forces = np.zeros(6)
-        joint_rep_forces = np.zeros(6)
-        ori_atual_vec = np.zeros(3)
-
         rate = rospy.Rate(80)
 
         raw_input("' =========== Press enter to start APF")
-        # while (dist_EOF_to_Goal > err  or abs(err_ori) > 0.02) and not rospy.is_shutdown():
+
         while not rospy.is_shutdown():
 
             # Get UR5 Jacobian of each link
             Jacobian = get_geometric_jacobian(self.ur5_param, self.actual_position)
 
-            # Substituir ori em Roll, Pitch e Yaw
-            oriAtual = [oriAtual[i] + corr[i] for i in range(len(corr))]
-            rospy.loginfo("Ori atual: " + str(oriAtual))
-
             # Get attractive linear and angular forces and repulsive forces
-            joint_att_force_p, joint_att_force_w = \
-                self.get_joint_forces(ptAtual, ptFinal, oriAtual, Displacement,
-                                     dist_EOF_to_Goal, Jacobian, self.actual_position, self.ur5_param, zeta,
-                                     eta, rho_0, dist_att, dist_att_config)
+            joint_att_force_p = \
+                self.get_joint_forces(ptAtual, ptFinal,
+                                     dist_EOF_to_Goal, Jacobian, self.actual_position, self.ur5_param, zeta, dist_att)
 
             self.joint_vels.data = np.array(alfa * joint_att_force_p[0])
-
-            # If orientation control is turned on, sum actual position forces to orientation forces
-            if self.args.OriON or ORI_COMP:
-                self.joint_vels.data = self.joint_vels.data + \
-                    alfa_rot * joint_att_force_w[0]
 
             self.pub_vel.publish(self.joint_vels)
 
             if self.args.armarker:
                 try:
                     # used when Ar Marker is ON
-                    ptFinal, oriAtual = self.tf.lookupTransform("base_link", "ar_marker_0", rospy.Time())
+                    ptFinal, _ = self.tf.lookupTransform("base_link", "ar_marker_0", rospy.Time())
                     self.add_sphere(ptFinal, self.diam_goal, ColorRGBA(0.0, 1.0, 0.0, 1.0))
                 except:
                     if not rospy.is_shutdown():
@@ -319,11 +237,7 @@ class vel_control:
             elif self.args.dyntest:
                 ptFinal = self.ptFinal
 
-            ptAtual, oriAtual = self.tf.lookupTransform("base_link", "grasping_link", rospy.Time())
-            oriAtual = euler_from_quaternion(oriAtual)
-
-            # Get absolute orientation error
-            # err_ori = np.sum(oriAtual)
+            ptAtual, _ = self.tf.lookupTransform("base_link", "grasping_link", rospy.Time())
 
             dist_EOF_to_Goal = np.linalg.norm(ptAtual - np.asarray(ptFinal))
 

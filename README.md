@@ -1,5 +1,11 @@
 ## Project - Artificial Potential Field with ArUco Marker
 
+!! IMPORTANT NOTE !!
+
+Each functionality is separated by branch in order to keep things organized.
+Anything related to obstacles and orientation control was removed from the main code here.
+The files that are not used in this branch (Velocity control functionality was removed.)
+
 ## Description
 
 This branch was created to test speed control. According to the ur_modern_driver repository, velocity control reacts much faster than position control and is recommended for visual servoing. The next commands will show you what it takes for velocity control to work.
