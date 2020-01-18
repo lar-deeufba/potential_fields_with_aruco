@@ -17,14 +17,17 @@ from visualization_msgs.msg import Marker
 from std_msgs.msg import Header, ColorRGBA
 from geometry_msgs.msg import PoseStamped, Point, Vector3, Pose
 
-from tf import TransformListener
-from tf.transformations import euler_from_quaternion #, quaternion_matrix
+from tf import TransformListener, TransformerROS
+from tf.transformations import euler_from_quaternion, quaternion_from_euler, euler_from_matrix, quaternion_multiply
 
 # import from moveit
 from moveit_python import PlanningSceneInterface
 
 # customized code
 from get_geometric_jacobian import *
+from ur_inverse_kinematics import *
+
+from pyquaternion import Quaternion
 
 def parse_args():
     parser = argparse.ArgumentParser(description='AAPF_Orientation')
@@ -41,13 +44,6 @@ def parse_args():
     parser.add_argument('--realUR5', action='store_true', help='Enable real UR5 controlling')
     args = parser.parse_args()
     return args
-
-def print_output(n, way_points, wayPointsSmoothed, dist_EOF_to_Goal):
-    print("Dados dos CPAAs")
-    print("Iterations: ", n)
-    print("Way points: ", len(way_points))
-    print("Way points smoothed: ", len(wayPointsSmoothed))
-    print("Distance to goal: ", dist_EOF_to_Goal)
 
 class vel_control:
     def __init__(self, args):
@@ -91,28 +87,57 @@ class vel_control:
                                             'elbow_joint', 'wrist_1_joint', 'wrist_2_joint',
                                             'wrist_3_joint']
 
-        # TF transformations
+        # Class attribute used to perform TF transformations
         self.tf = TransformListener()
 
-        # Data for customized code
-        self.ur5_param = (0.089159, 0.13585, -0.1197, 0.425, 0.39225, 0.10915, 0.093, 0.09465, 0.0823 + 0.15) # d1, SO, EO, a2, a3, d4, d45, d5, d6
+        # Denavit-Hartenberg parameters of UR5
+        # The order of the parameters is d1, SO, EO, a2, a3, d4, d45, d5, d6
+        self.ur5_param = (0.089159, 0.13585, -0.1197, 0.425, 0.39225, 0.10915, 0.093, 0.09465, 0.0823 + 0.15)
 
+
+    def all_close(self, goal, tolerance = 0.00005):
+
+        angles_difference = [self.actual_position[i] - goal[i] for i in range(6)]
+        total_error = np.sum(angles_difference)
+
+        if abs(total_error) > tolerance:
+            return False
+
+        print("Total error: ", total_error)
+        return True
+
+    """
+    The joint states published by /joint_staes of the UR5 robot are in wrong order.
+    /joint_states topic normally publishes the joint in the following order:
+    [elbow_joint, shoulder_lift_joint, shoulder_pan_joint, wrist_1_joint, wrist_2_joint, wrist_3_joint]
+    But the correct order of the joints that must be sent to the robot is:
+    ['shoulder_pan_joint', 'shoulder_lift_joint', 'elbow_joint', 'wrist_1_joint', 'wrist_2_joint', 'wrist_3_joint']
+    """
     def ur5_actual_position(self, joint_values_from_ur5):
-        # It reads the last robot position
         self.th3, self.th2, self.th1, self.th4, self.th5, self.th6 = joint_values_from_ur5.position
         self.actual_position = [self.th1, self.th2, self.th3, self.th4, self.th5, self.th6]
-        # rospy.loginfo(self.actual_position)
 
+    """
+    When to node /dynamic_goal from publish_dynamic_goal.py is used instead of Markers, this
+    function is responsible for getting the coordinates published by the node and save it
+    as attribute of the class
+    """
     def get_goal_coordinates(self, goal_coordinates):
         self.ptFinal = [goal_coordinates.x, goal_coordinates.y, goal_coordinates.z]
         self.add_sphere(self.ptFinal, self.diam_goal, ColorRGBA(0.0, 1.0, 0.0, 1.0))
 
+    """
+    Stop the robot when the node is killed
+    """
     def stop_robot(self):
         # Set zero velocity in order to keep the robot in last calculated position
         rospy.loginfo("Stopping robot!")
         self.joint_vels.data = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
         self.pub_vel.publish(self.joint_vels)
 
+    """
+    Used to test velcoity control under /joint_group_vel_controller/command topic
+    """
     def velocity_control_test(self):
         # publishing rate for velocity control
         rate = rospy.Rate(125)
@@ -123,22 +148,45 @@ class vel_control:
             rospy.loginfo(self.actual_position)
             rate.sleep()
 
-    def home_pos(self):
-        # home_pos = [2.7, -1.5707, 0.3, -1.5707, -1.5707, -1.5707]
-        home_pos = [3.14, -1.5707, 0, -1.5707, -1.5707, -1.5707]
-        # home_pos = [0.0, 0.0, 0, 0.0, 0.0, 0.0]
+    """
+    Calculate the initial robot position - Used before CPA application
+    """
+    def get_ik(self, pose):
+
+        matrix = TransformerROS()
+
+        # The orientation of /tool0 will be constant
+        q = quaternion_from_euler(0, 3.14, 1.57)
+
+        matrix2 = matrix.fromTranslationRotation((pose[0]*(-1), pose[1]*(-1), pose[2]), (q[0], q[1], q[2], q[3]))
+
+        th = invKine(matrix2)
+        sol1 = th[:, 2].transpose()
+        joint_values_from_ik = np.array(sol1)
+
+        joint_values = joint_values_from_ik[0, :]
+
+        return joint_values.tolist()
+
+    """
+    Send the HOME position to the robot
+    self.client.wait_for_result() does not work well.
+    Instead, a while loop has been created to ensure that the robot reaches the
+    goal even after the failure.
+    """
+    def home_pos(self, home_pos = [3.14, -1.5707, 0, -1.5707, -1.5707, -1.5707]):
+        home_pos[-1] = 3.14
 
         # First point is current position
         try:
             self.goal.trajectory.points.append(JointTrajectoryPoint(positions=home_pos, velocities=[0]*6, time_from_start=rospy.Duration(4)))
             self.client.send_goal(self.goal)
             self.client.wait_for_result()
-            rospy.sleep(2)
-            if self.client.get_state() == actionlib.GoalStatus.SUCCEEDED:
-                print("The arm is in home position")
-            else:
-                print("The arm failed to execute the trajectory.")
-                print self.client.get_state()
+            while not self.all_close(home_pos) and not rospy.is_shutdown():
+                self.client.send_goal(self.goal)
+                self.client.wait_for_result()
+            if self.all_close(home_pos):
+                print("The arm is in home position!  \n")
         except KeyboardInterrupt:
             self.client.cancel_goal()
             raise
@@ -146,9 +194,8 @@ class vel_control:
             raise
 
     """
-    Adds the obstacles and repulsive control points on the robot
+    Adds spheres in RVIZ - Used to plot goals and obstacles
     """
-
     def add_sphere(self, pose, diam, color):
         marker = Marker()
         marker.header.frame_id = "base_link"
@@ -161,29 +208,10 @@ class vel_control:
         self.marker_publisher.publish(marker)
 
     """
-    TH Matrix from joint angles
-    """
-
-    def matrix_from_joint_angles(self):
-            th1, th2, th3, th4, th5, th6 = self.th1, self.th2, self.th3, self.th4, self.th5, self.th6
-            d1, SO, EO, a2, a3, d4, d45, d5, d6 = self.ur5_param
-
-            matrix = [[-(sin(th1)*sin(th5) + cos(th1)*cos(th5)*cos(th2 + th3 + th4))*cos(th6) + sin(th6)*sin(th2 + th3 + th4)*cos(th1), (sin(th1)*sin(th5) + cos(th1)*cos(th5)*cos(th2 + th3 + th4))*sin(th6) + sin(th2 + th3 + th4)*cos(th1)*cos(th6), -sin(th1)*cos(th5) + sin(th5)*cos(th1)*cos(th2 + th3 + th4), -EO*sin(th1) - SO*sin(th1) + a2*cos(th1)*cos(th2) + a3*cos(th1)*cos(th2 + th3) - d45*sin(th1) - d5*sin(th2 + th3 + th4)*cos(th1) - d6*(sin(th1)*cos(th5) - sin(th5)*cos(th1)*cos(th2 + th3 + th4))], [-(sin(th1)*cos(th5)*cos(th2 + th3 + th4) - sin(th5)*cos(th1))*cos(th6) + sin(th1)*sin(th6)*sin(th2 + th3 + th4), (sin(th1)*cos(th5)*cos(th2 + th3 + th4) - sin(th5)*cos(th1))*sin(th6) + sin(th1)*sin(th2 + th3 + th4)*cos(th6), sin(th1)*sin(th5)*cos(th2 + th3 + th4) + cos(th1)*cos(th5), EO*cos(th1) + SO*cos(th1) + a2*sin(th1)*cos(th2) + a3*sin(th1)*cos(th2 + th3) + d45*cos(th1) - d5*sin(th1)*sin(th2 + th3 + th4) + d6*(sin(th1)*sin(th5)*cos(th2 + th3 + th4) + cos(th1)*cos(th5))], [sin(th6)*cos(th2 + th3 + th4) + sin(th2 + th3 + th4)*cos(th5)*cos(th6), -sin(th6)*sin(th2 + th3 + th4)*cos(th5) + cos(th6)*cos(th2 + th3 + th4), -sin(th5)*sin(th2 + th3 + th4), -a2*sin(th2) - a3*sin(th2 + th3) + d1 - d5*cos(th2 + th3 + th4) - d6*sin(th5)*sin(th2 + th3 + th4)], [0, 0, 0, 1]]
-            return matrix
-
-    """
     Get forces from APF algorithm
     """
-    def get_joint_forces(self, ptAtual, ptFinal, oriAtual, Displacement, dist_EOF_to_Goal, Jacobian, joint_values, ur5_param, zeta, eta,
-    rho_0, dist_att, dist_att_config):
-        """
-        Get attractive and repulsive forces
-
-        :param CP_dist: [6][13] array vector corresponding to 6 joints and 13 obstacles
-        :param CP_pos: [6][3] array vector corresponding to 6 joints and 3 coordinates of each joint
-        :param obs_pos: [13][3] array vector corresponding to 13 obstacles and 3 coordinates
-        :return: attractive and repulsive forces
-        """
+    def get_joint_forces(self, ptAtual, ptFinal, oriAtual, Displacement, dist_EOF_to_Goal, Jacobian,
+                         zeta, dist_att, dist_att_config, err_ori):
 
         # Getting attractive forces
         forces_p = np.zeros((3, 1))
@@ -193,7 +221,7 @@ class vel_control:
             if abs(ptAtual[i] - ptFinal[i]) <= dist_att:
                 f_att_l = -zeta[-1]*(ptAtual[i] - ptFinal[i])
             else:
-                f_att_l = -dist_att*zeta[-1]*(ptAtual[i] - ptFinal[i])/(dist_EOF_to_Goal)
+                f_att_l = -dist_att*zeta[-1]*(ptAtual[i] - ptFinal[i])/dist_EOF_to_Goal
 
             if abs(oriAtual[i] - Displacement[i]) <= dist_att_config:
                 f_att_w = -zeta[-1]*(oriAtual[i] - Displacement[i])
@@ -206,124 +234,135 @@ class vel_control:
         forces_p = np.asarray(forces_p)
         JacobianAtt_p = np.asarray(Jacobian[5])
         joint_att_force_p = JacobianAtt_p.dot(forces_p)
-        joint_att_force_p = np.multiply(joint_att_force_p, [[1], [1.5], [1.5], [1], [1], [1]])
+        joint_att_force_p = np.multiply(joint_att_force_p, [[0.5], [0.1], [1.5], [1], [1], [1]])
 
         forces_w = np.asarray(forces_w)
         JacobianAtt_w = np.asarray(Jacobian[6])
         joint_att_force_w = JacobianAtt_w.dot(forces_w)
-        joint_att_force_w = np.multiply(joint_att_force_w, [[0], [0], [0.05], [0.4], [0.4], [0.4]])
+        # joint_att_force_w = np.multiply(joint_att_force_w, [[0], [0.6], [0.1], [0.4], [0.4], [0.4]])
+        joint_att_force_w = np.multiply(joint_att_force_w, [[0], [0.1], [0.1], [0.4], [0.4], [0.4]])
 
         return np.transpose(joint_att_force_p), np.transpose(joint_att_force_w)
 
-    def CPA_vel_control(self, AAPF_COMP = False, ORI_COMP = False):
+    """
+    Main function related the Artificial Potential Field method
+    """
+    def CPA_vel_control(self):
 
-        # Final position - Orientation only
-        Displacement = [0.01, 0.01, 0.01]
+        # At the end, the disciplacement will take place as a final orientation
+        Displacement = [0.1, 0.1, 0.1]
 
         # CPA Parameters
-        diam_obs = 0.3 # still need to update this parameter accondinly to real time control
-        err = self.diam_goal / 2  # Max error allowed
-        max_iter = 1500  # Max iterations
-        zeta = [0.5 for i in range(7)]  # Attractive force gain of each obstacle
-        rho_0 = diam_obs / 2  # Influence distance of each obstacle
+        zeta = [0.5 for i in range(7)]  # Attractive force gain of the goal
         dist_att = 0.05  # Influence distance in workspace
         dist_att_config = 0.2  # Influence distance in configuration space
-        alfa = 3  # Grad step of positioning - Default: 0.5
-        alfa_rot = 1  # Grad step of orientation - Default: 0.4
-        CP_ur5_rep = [0.15]*6  # Repulsive fields on UR5
-        CP_ur5_rep[-2] = 0.15
+        alfa_geral = 1.2 # multiply each alfa (position and rotation) equally
+        alfa = 4*alfa_geral  # Grad step of positioning - Default: 0.5
+        alfa_rot = 4*alfa_geral  # Grad step of orientation - Default: 0.4
+        high_limit = 0.1 # High limit in meters of the end effector relative to the base_link
 
-        # This repulsive gain is used if AAPF is set on with orientation control
-        eta = [0.00001 for i in range(6)]  # Repulsive gain of each obstacle default: 0.00006
-
-        # This attractive gain is used if AAPF is set on WITHOUT orientation control
-        if self.args.AAPF and not self.args.OriON or (AAPF_COMP and not ORI_COMP):
-            eta = [0.0006 for i in range(6)]
-
-        ptAtual, oriAtual = self.tf.lookupTransform("base_link", "grasping_link", rospy.Time())
-        oriAtual = euler_from_quaternion(oriAtual)
-
-        '''
-        PARA TESTE
-        '''
-        rospy.loginfo("Ori in Euler: " + str(oriAtual))
-
-        '''
-        PARA TESTE
-        '''
+        ptAtual, _ = self.tf.lookupTransform("base_link", "grasping_link", rospy.Time())
 
         # if true, this node receives messages from publish_dynamic_goal.py
         if self.args.armarker:
             try:
-                # used when Ar Marker is ON
-                ptFinal, _ = self.tf.lookupTransform("base_link", "ar_marker_0", rospy.Time())
+            # used when Ar Marker is ON
+                ptFinal, prevOri = self.tf.lookupTransform("base_link", "ar_marker_0", rospy.Time())
+                _, oriAtual = self.tf.lookupTransform("ar_marker_0", "grasping_link", rospy.Time())
+                print "OriAtual original (lookupTransform)", euler_from_quaternion(oriAtual)
             except:
                 if not rospy.is_shutdown():
-                    raw_input("Put the marker in front of cam and press enter after it is known!")
+                    raw_input("\nPut the marker in front of cam and press enter after it is known!")
                     self.CPA_vel_control()
         elif self.args.dyntest:
             ptFinal = self.ptFinal
 
+        prevOri[-1] = -1 * prevOri[-1] # necessary to calculate the angle diff
+        # this q_new is stored as an orientation difference between grasping_link and ar_marker_0
+        q_new = quaternion_multiply(oriAtual, prevOri) # (curr, prev (0, 0, 0, 1) - no rotation )
+        q_new = euler_from_quaternion(q_new)
+        print "q_new (from quat multiply): ", q_new
+
+        # Calculate the correction orientation relative to the actual orientation
+        R, P, Y = -1*q_new[0], -1*q_new[1], -1*q_new[2]
+        corr = [R, P, Y]
+        print "Correction angle (from quat multiply): ", corr
+
         dist_EOF_to_Goal = np.linalg.norm(ptAtual - np.asarray(ptFinal))
-        print("Dist to goal: " + str(dist_EOF_to_Goal))
 
         self.scene.clear()
+        rate = rospy.Rate(120)
 
-        # Angle correction relative to base_link (from grasping_link)
-        R, P, Y = 0.0, 1.2, 0
-        err_ori = 1
-        corr = [R, P, Y]
+        raw_input("\n=========== Press enter to start APF")
 
-        joint_attractive_forces = np.zeros(6)
-        joint_rep_forces = np.zeros(6)
-        ori_atual_vec = np.zeros(3)
-
-        rate = rospy.Rate(80)
-
-        raw_input("' =========== Press enter to start APF")
-        # while (dist_EOF_to_Goal > err  or abs(err_ori) > 0.02) and not rospy.is_shutdown():
         while not rospy.is_shutdown():
 
             # Get UR5 Jacobian of each link
             Jacobian = get_geometric_jacobian(self.ur5_param, self.actual_position)
 
-            # Substituir ori em Roll, Pitch e Yaw
+            # Check if a marker is usted instead of a dynamic goal published by publish_dynamic_goal.py
+            if self.args.armarker:
+                # When the marker disappears we get an error and the node is killed. To avoid this
+                # we implemented this try function to check if ar_marker_0 frame is available
+                try:
+                    # used when Ar Marker is ON
+                    ptFinal, _ = self.tf.lookupTransform("base_link", "ar_marker_0", rospy.Time())
+                    _, oriAtual = self.tf.lookupTransform("ar_marker_0", "grasping_link", rospy.Time())
+                    self.add_sphere(ptFinal, self.diam_goal, ColorRGBA(0.0, 1.0, 0.0, 1.0))
+                except:
+                    if not rospy.is_shutdown():
+                        self.stop_robot()
+                        raw_input("\nPut the marker in front of cam and press enter after it is known!")
+                        self.CPA_vel_control()
+            elif self.args.dyntest:
+                ptFinal = self.ptFinal
+
+            prevOri[-1] = -1 * prevOri[-1] # necessary to calculate the angle diff
+            q_new = quaternion_multiply(oriAtual, prevOri) # (curr, prev (0, 0, 0, 1) - no rotation )
+            oriAtual = list(euler_from_quaternion(q_new))
+
+            # Get absolute orientation error
+            err_ori = np.sum(oriAtual)
+
+            # The relative orientation from ar_marker_0 to grasping_link varies from
+            # -pi to pi. The angle difference between these two frames can lead to erros
+            # in the absolute orientation.
+            if oriAtual[0] > 0:
+                print "ORI ATUAL --------------- ", oriAtual[0]
+                oriAtual[0] = -1 * oriAtual[0]
+
+            rospy.loginfo("Ori relative  (loop): " + str(oriAtual) + " \n")
+
+            # In order to keep orientation constant, we need to correct the orientation
+            # of the end effector in respect to the ar_marker_0
             oriAtual = [oriAtual[i] + corr[i] for i in range(len(corr))]
-            rospy.loginfo("Ori atual: " + str(oriAtual))
+            print "OriAtual in loop (corrected): ", oriAtual
+
+            if ptAtual[2] < high_limit:
+                # Be careful. Only the limit of the end effector is being watched but the other
+                # joint can also exceed this limit and need to be carefully watched by the operator
+                rospy.loginfo("High limit of" + str(high_limit) + "exceeded!")
+                self.stop_robot()
+                raw_input("\n Press enter to home the robot again!")
+                joint_values = ur5_vel.get_ik([-0.4, -0.1, 0.6 + 0.15])
+                ur5_vel.home_pos(joint_values)
 
             # Get attractive linear and angular forces and repulsive forces
             joint_att_force_p, joint_att_force_w = \
                 self.get_joint_forces(ptAtual, ptFinal, oriAtual, Displacement,
-                                     dist_EOF_to_Goal, Jacobian, self.actual_position, self.ur5_param, zeta,
-                                     eta, rho_0, dist_att, dist_att_config)
+                                     dist_EOF_to_Goal, Jacobian, zeta,
+                                     dist_att, dist_att_config, err_ori)
 
             self.joint_vels.data = np.array(alfa * joint_att_force_p[0])
 
             # If orientation control is turned on, sum actual position forces to orientation forces
-            if self.args.OriON or ORI_COMP:
+            if self.args.OriON:
                 self.joint_vels.data = self.joint_vels.data + \
                     alfa_rot * joint_att_force_w[0]
 
             self.pub_vel.publish(self.joint_vels)
 
-            if self.args.armarker:
-                try:
-                    # used when Ar Marker is ON
-                    ptFinal, oriAtual = self.tf.lookupTransform("base_link", "ar_marker_0", rospy.Time())
-                    self.add_sphere(ptFinal, self.diam_goal, ColorRGBA(0.0, 1.0, 0.0, 1.0))
-                except:
-                    if not rospy.is_shutdown():
-                        self.stop_robot()
-                        raw_input("Put the marker in front of cam and press enter after it is known!")
-                        self.CPA_vel_control()
-            elif self.args.dyntest:
-                ptFinal = self.ptFinal
-
-            ptAtual, oriAtual = self.tf.lookupTransform("base_link", "grasping_link", rospy.Time())
-            oriAtual = euler_from_quaternion(oriAtual)
-
-            # Get absolute orientation error
-            # err_ori = np.sum(oriAtual)
+            ptAtual, _ = self.tf.lookupTransform("base_link", "grasping_link", rospy.Time())
 
             dist_EOF_to_Goal = np.linalg.norm(ptAtual - np.asarray(ptFinal))
 
@@ -338,8 +377,12 @@ if __name__ == '__main__':
         '''
         rosservice.call_service('/controller_manager/switch_controller', [['pos_based_pos_traj_controller'], ['joint_group_vel_controller'], 1])
         ur5_vel = vel_control(arg)
-        raw_input("Press enter to load home position!")
-        ur5_vel.home_pos()
+
+        raw_input("\n Press enter to load home position!")
+
+        # Calculate the joint_values equivalent to the initial position before grasping
+        joint_values = ur5_vel.get_ik([-0.4, -0.1, 0.6 + 0.15])
+        ur5_vel.home_pos(joint_values)
 
         '''
         Velocity Control Test
