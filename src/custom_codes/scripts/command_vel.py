@@ -245,12 +245,57 @@ class vel_control:
         return np.transpose(joint_att_force_p), np.transpose(joint_att_force_w)
 
     """
+    Function to ensure safety
+    """
+    def safety_stop(self, ptAtual):
+        high_limit = 0.1 # High limit in meters of the end effector relative to the base_link
+
+        if ptAtual[2] < high_limit:
+            # Be careful. Only the limit of the end effector is being watched but the other
+            # joint can also exceed this limit and need to be carefully watched by the operator
+            rospy.loginfo("High limit of" + str(high_limit) + "exceeded!")
+            self.stop_robot()
+            raw_input("\n==== Press enter to home the robot again!")
+            joint_values = ur5_vel.get_ik([-0.4, -0.1, 0.6 + 0.15])
+            ur5_vel.home_pos(joint_values)
+
+    """
+    Gets ptFinal and oriAtual
+    """
+    def get_tf_param(self):
+        # Check if a marker is used instead of a dynamic goal published by publish_dynamic_goal.py
+        if self.args.armarker:
+            # When the marker disappears we get an error and the node is killed. To avoid this
+            # we implemented this try function to check if ar_marker_0 frame is available
+            try:
+                # used when Ar Marker is ON
+                ptFinal, _ = self.tf.lookupTransform("base_link", "ar_marker_0", rospy.Time())
+                ptAtual, oriAtualGraspingLink = self.tf.lookupTransform("base_link", "grasping_link", rospy.Time())
+
+                # Solution proposed by
+                # https://answers.ros.org/question/302953/tfquaternion-getangle-eqivalent-for-rospy/
+                angle = -1 * 2 * np.arccos(oriAtualGraspingLink[-1])
+                oriAtualGraspingLink = list(euler_from_quaternion(oriAtualGraspingLink))
+                oriAtualGraspingLink[0] = angle
+
+                self.add_sphere(ptFinal, self.diam_goal, ColorRGBA(0.0, 1.0, 0.0, 1.0))
+            except (tf.LookupException, tf.ConnectivityException):
+                    if not rospy.is_shutdown():
+                        self.stop_robot()
+                        raw_input("\nWaiting for /ar_marker_0 frame to be available!")
+                        self.CPA_vel_control()
+        elif self.args.dyntest:
+            ptFinal = self.ptFinal
+
+        return ptFinal, oriAtualGraspingLink
+
+    """
     Main function related the Artificial Potential Field method
     """
     def CPA_vel_control(self):
 
         # At the end, the disciplacement will take place as a final orientation
-        Displacement = [0.1, 0.1, 0.1]
+        Displacement = [0.03, 0.03, 0.03]
 
         # CPA Parameters
         zeta = [0.5 for i in range(7)]  # Attractive force gain of the goal
@@ -259,93 +304,39 @@ class vel_control:
         alfa_geral = 1.2 # multiply each alfa (position and rotation) equally
         alfa = 4*alfa_geral  # Grad step of positioning - Default: 0.5
         alfa_rot = 4*alfa_geral  # Grad step of orientation - Default: 0.4
-        high_limit = 0.1 # High limit in meters of the end effector relative to the base_link
 
+        # Return the end effector location relative to the base_link
         ptAtual, _ = self.tf.lookupTransform("base_link", "grasping_link", rospy.Time())
 
-        # if true, this node receives messages from publish_dynamic_goal.py
-        if self.args.armarker:
-            try:
-            # used when Ar Marker is ON
-                ptFinal, prevOri = self.tf.lookupTransform("base_link", "ar_marker_0", rospy.Time())
-                _, oriAtual = self.tf.lookupTransform("ar_marker_0", "grasping_link", rospy.Time())
-                print "OriAtual original (lookupTransform)", euler_from_quaternion(oriAtual)
-            except:
-                if not rospy.is_shutdown():
-                    raw_input("\nPut the marker in front of cam and press enter after it is known!")
-                    self.CPA_vel_control()
-        elif self.args.dyntest:
-            ptFinal = self.ptFinal
+        # Get ptFinal published by ar_marker_0 frame and the orientation from grasping_link to ar_marker_0
+        ptFinal, oriAtual = self.get_tf_param()
 
-        prevOri[-1] = -1 * prevOri[-1] # necessary to calculate the angle diff
-        # this q_new is stored as an orientation difference between grasping_link and ar_marker_0
-        q_new = quaternion_multiply(oriAtual, prevOri) # (curr, prev (0, 0, 0, 1) - no rotation )
-        q_new = euler_from_quaternion(q_new)
-        print "q_new (from quat multiply): ", q_new
-
-        # Calculate the correction orientation relative to the actual orientation
-        R, P, Y = -1*q_new[0], -1*q_new[1], -1*q_new[2]
+        # Calculate the correction of the orientation relative to the actual orientation
+        R, P, Y = -1*oriAtual[0], -1*oriAtual[1], -1*oriAtual[2]
         corr = [R, P, Y]
         print "Correction angle (from quat multiply): ", corr
 
+        # Calculate the distance between end effector and goal
         dist_EOF_to_Goal = np.linalg.norm(ptAtual - np.asarray(ptFinal))
 
-        self.scene.clear()
+        # Frequency of the velocity controller pubisher
+        # Max frequency: 125 Hz
         rate = rospy.Rate(120)
 
-        raw_input("\n=========== Press enter to start APF")
-
+        raw_input("\n==== Press enter to start APF")
         while not rospy.is_shutdown():
 
             # Get UR5 Jacobian of each link
             Jacobian = get_geometric_jacobian(self.ur5_param, self.actual_position)
 
-            # Check if a marker is usted instead of a dynamic goal published by publish_dynamic_goal.py
-            if self.args.armarker:
-                # When the marker disappears we get an error and the node is killed. To avoid this
-                # we implemented this try function to check if ar_marker_0 frame is available
-                try:
-                    # used when Ar Marker is ON
-                    ptFinal, _ = self.tf.lookupTransform("base_link", "ar_marker_0", rospy.Time())
-                    _, oriAtual = self.tf.lookupTransform("ar_marker_0", "grasping_link", rospy.Time())
-                    self.add_sphere(ptFinal, self.diam_goal, ColorRGBA(0.0, 1.0, 0.0, 1.0))
-                except:
-                    if not rospy.is_shutdown():
-                        self.stop_robot()
-                        raw_input("\nPut the marker in front of cam and press enter after it is known!")
-                        self.CPA_vel_control()
-            elif self.args.dyntest:
-                ptFinal = self.ptFinal
-
-            prevOri[-1] = -1 * prevOri[-1] # necessary to calculate the angle diff
-            q_new = quaternion_multiply(oriAtual, prevOri) # (curr, prev (0, 0, 0, 1) - no rotation )
-            oriAtual = list(euler_from_quaternion(q_new))
-
             # Get absolute orientation error
             err_ori = np.sum(oriAtual)
-
-            # The relative orientation from ar_marker_0 to grasping_link varies from
-            # -pi to pi. The angle difference between these two frames can lead to erros
-            # in the absolute orientation.
-            if oriAtual[0] > 0:
-                print "ORI ATUAL --------------- ", oriAtual[0]
-                oriAtual[0] = -1 * oriAtual[0]
-
-            rospy.loginfo("Ori relative  (loop): " + str(oriAtual) + " \n")
 
             # In order to keep orientation constant, we need to correct the orientation
             # of the end effector in respect to the ar_marker_0
             oriAtual = [oriAtual[i] + corr[i] for i in range(len(corr))]
-            print "OriAtual in loop (corrected): ", oriAtual
 
-            if ptAtual[2] < high_limit:
-                # Be careful. Only the limit of the end effector is being watched but the other
-                # joint can also exceed this limit and need to be carefully watched by the operator
-                rospy.loginfo("High limit of" + str(high_limit) + "exceeded!")
-                self.stop_robot()
-                raw_input("\n Press enter to home the robot again!")
-                joint_values = ur5_vel.get_ik([-0.4, -0.1, 0.6 + 0.15])
-                ur5_vel.home_pos(joint_values)
+            print "Angle error (RPY): ", oriAtual
 
             # Get attractive linear and angular forces and repulsive forces
             joint_att_force_p, joint_att_force_w = \
@@ -353,8 +344,8 @@ class vel_control:
                                      dist_EOF_to_Goal, Jacobian, zeta,
                                      dist_att, dist_att_config, err_ori)
 
+            # Publishes joint valocities related to position only
             self.joint_vels.data = np.array(alfa * joint_att_force_p[0])
-
             # If orientation control is turned on, sum actual position forces to orientation forces
             if self.args.OriON:
                 self.joint_vels.data = self.joint_vels.data + \
@@ -362,8 +353,16 @@ class vel_control:
 
             self.pub_vel.publish(self.joint_vels)
 
+            # Return the end effector location relative to the base_link
             ptAtual, _ = self.tf.lookupTransform("base_link", "grasping_link", rospy.Time())
 
+            # Function to ensure safety. It does not allow End Effector to move below 20 cm above the desk
+            self.safety_stop(ptAtual)
+
+            # Get ptFinal published by ar_marker_0 frame and the orientation from grasping_link to ar_marker_0
+            ptFinal, oriAtual = self.get_tf_param()
+
+            # Calculate the distance between end effector and goal
             dist_EOF_to_Goal = np.linalg.norm(ptAtual - np.asarray(ptFinal))
 
             rate.sleep()
@@ -377,8 +376,8 @@ if __name__ == '__main__':
         '''
         rosservice.call_service('/controller_manager/switch_controller', [['pos_based_pos_traj_controller'], ['joint_group_vel_controller'], 1])
         ur5_vel = vel_control(arg)
-
-        raw_input("\n Press enter to load home position!")
+        ur5_vel.scene.clear()
+        raw_input("\n==== Press enter to load home position!")
 
         # Calculate the joint_values equivalent to the initial position before grasping
         joint_values = ur5_vel.get_ik([-0.4, -0.1, 0.6 + 0.15])

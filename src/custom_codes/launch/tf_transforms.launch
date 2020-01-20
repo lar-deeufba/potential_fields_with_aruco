@@ -19,5 +19,4 @@
 	<node if="$(arg fixed)" pkg="tf" type="static_transform_publisher" name="fixed_link_broadcaster"
 	      args="-0.5 -0.1 0.1 0.0 0.0 0.0 /base_link /ar_marker_0 40" />
 
-
 </launch>
