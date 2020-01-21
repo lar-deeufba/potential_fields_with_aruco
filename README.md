@@ -101,7 +101,23 @@ roslaunch custom_codes tf_transforms.launch kinect2_test:=true
 
 Remember to run command_vel node with --armarker argument
 
-## Connect with real UR5
+## Connecting with real UR5
+
+Firstly check the machine IP. The IP configured on the robot must have the last digit different.
+
+`ifconfig`
+
+Disable firewall
+
+`sudo ufw disable`
+
+Set up a static IP on UR5 according to the following figure
+
+![config](https://user-images.githubusercontent.com/28100951/71323978-2ca7d380-24b8-11ea-954c-940b009cfd93.jpg)
+
+Set up a connection on Ubuntu according to the following figure
+
+![config_ethernet2](https://user-images.githubusercontent.com/28100951/71323962-fe29f880-24b7-11ea-86dc-756729932de4.jpg)
 
 Use the following command in order to connect with real UR5.
 If you are using velocity control, do not use bring_up. Use ur5_ros_control instead.
