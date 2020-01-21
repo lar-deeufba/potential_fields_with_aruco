@@ -254,7 +254,7 @@ class vel_control:
         # High limit in meters of the end effector relative to the base_link
         high_limit = 0.03
 
-        # Does not allow wrist_1_link to move below 20 cm relative to base_link
+        # Does not allow wrist_1_link to move above 20 cm relative to base_link
         high_limit_wrist_pt = 0.2
 
         if ptAtual[-1] < high_limit or wristPt[-1] < high_limit_wrist_pt:
