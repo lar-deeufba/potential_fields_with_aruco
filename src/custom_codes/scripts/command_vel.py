@@ -251,9 +251,13 @@ class vel_control:
     Function to ensure safety
     """
     def safety_stop(self, ptAtual, wristPt):
-        high_limit = 0.1 # High limit in meters of the end effector relative to the base_link
+        # High limit in meters of the end effector relative to the base_link
+        high_limit = 0.03
 
-        if ptAtual[-1] < high_limit or wristPt[-1] < high_limit:
+        # Does not allow wrist_1_link to move below 20 cm relative to base_link
+        high_limit_wrist_pt = 0.2
+
+        if ptAtual[-1] < high_limit or wristPt[-1] < high_limit_wrist_pt:
             # Be careful. Only the limit of the end effector is being watched but the other
             # joint can also exceed this limit and need to be carefully watched by the operator
             rospy.loginfo("High limit of " + str(high_limit) + " exceeded!")
