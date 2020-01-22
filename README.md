@@ -29,21 +29,10 @@ Substitute src/files_to_substitute/ur5.srdf into universal_robot/ur5_moveit_conf
 ## Test Velocity Control (Usage)
 
 The ur5.launch was modified to not start gazebo while velocity command is still being tested.
+Wait for the message "You can start planning now!" to show before running the next command.
 
 ```
-roslaunch ur_gazebo ur5.launch
-```
-
-For setting up the MoveIt! nodes to allow motion planning run:
-
-```
-roslaunch ur5_moveit_config ur5_moveit_planning_execution.launch sim:=true
-```
-
-In order to start RViz with a configuration including the MoveIt! Motion Planning plugin run:
-
-```
-roslaunch ur5_moveit_config moveit_rviz.launch config:=true
+roslaunch custom_codes APF_project.launch
 ```
 
 ! IMPORTANT ! - Remember to start URSIM before launching ur5_ros_control
@@ -53,18 +42,6 @@ Start the ur modern drive to connect with URSIM (3.9.1 version) - Remember to se
 roslaunch ur_modern_driver ur5_ros_control.launch robot_ip:=127.0.1.1
 ```
 
-Before running the next command, check if joint_group_vel_controller is running by calling:
-
-```
-rosservice call /controller_manager/list_controllers
-```
-
-If you don't have the webcam connected please publish a fake ar_marker_0 frame for the robot to reach its pose.
-
-```
-roslaunch custom_codes tf_transform fixed:=true
-```
-
 Start the command_vel node in order to check if velocity control is working properly (check arguments).
 The following command will turn on orientation control (if desired).
 
@@ -72,10 +49,18 @@ The following command will turn on orientation control (if desired).
 rosrun custom_codes command_vel.py --armarker --OriON
 ```
 
+### Optional commands (Related to Test Velocity Control)
+
 If you want to test velocity control with a dynamic goal published by a node (without Kinect), first run this node before command_vel.py and then run command_vel.py with --dyntest argument.
 
 ```
 rosrun custom_codes publish_dynamic_goal.py
+```
+
+If required, check if joint_group_vel_controller is running by calling:
+
+```
+rosservice call /controller_manager/list_controllers
 ```
 
 ## Test Computer Vision Tools (Kinect)
@@ -100,31 +85,6 @@ roslaunch custom_codes tf_transforms.launch kinect2_test:=true
 ```
 
 Remember to run command_vel node with --armarker argument
-
-## Connecting with real UR5
-
-Firstly check the machine IP. The IP configured on the robot must have the last digit different.
-
-`ifconfig`
-
-Disable firewall
-
-`sudo ufw disable`
-
-Set up a static IP on UR5 according to the following figure
-
-![config](https://user-images.githubusercontent.com/28100951/71323978-2ca7d380-24b8-11ea-954c-940b009cfd93.jpg)
-
-Set up a connection on Ubuntu according to the following figure
-
-![config_ethernet2](https://user-images.githubusercontent.com/28100951/71323962-fe29f880-24b7-11ea-86dc-756729932de4.jpg)
-
-Use the following command in order to connect with real UR5.
-If you are using velocity control, do not use bring_up. Use ur5_ros_control instead.
-
-```
-roslaunch ur_modern_driver ur5_ros_control.launch robot_ip:=192.168.131.12
-```
 
 ## How to use PC cam to track ar_tracker_alvar markers
 
@@ -157,6 +117,31 @@ Change the marker size (in centimeters) of the marker printed version in the lau
 
 ```
 roslaunch custom_codes PC_CAM_alvar.launch
+```
+
+## Connecting with real UR5
+
+Firstly check the machine IP. The IP configured on the robot must have the last digit different.
+
+`ifconfig`
+
+Disable firewall
+
+`sudo ufw disable`
+
+Set up a static IP on UR5 according to the following figure
+
+![config](https://user-images.githubusercontent.com/28100951/71323978-2ca7d380-24b8-11ea-954c-940b009cfd93.jpg)
+
+Set up a connection on Ubuntu according to the following figure
+
+![config_ethernet2](https://user-images.githubusercontent.com/28100951/71323962-fe29f880-24b7-11ea-86dc-756729932de4.jpg)
+
+Use the following command in order to connect with real UR5.
+If you are using velocity control, do not use bring_up. Use ur5_ros_control instead.
+
+```
+roslaunch ur_modern_driver ur5_ros_control.launch robot_ip:=192.168.131.12
 ```
 
 ## Contributors

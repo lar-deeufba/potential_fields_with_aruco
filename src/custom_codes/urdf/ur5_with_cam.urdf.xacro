@@ -1,0 +1,49 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://wiki.ros.org/xacro"
+       name="ur5" >
+
+  <xacro:arg name="transmission_hw_interface" default="hardware_interface/PositionJointInterface"/>
+
+  <!-- ur5 -->
+  <xacro:include filename="$(find ur_description)/urdf/ur5.urdf.xacro" />
+
+  <!-- arm -->
+  <xacro:ur5_robot prefix="" joint_limited="false"
+    transmission_hw_interface="$(arg transmission_hw_interface)"
+  />
+
+  <link name="world" />
+
+  <joint name="world_joint" type="fixed">
+    <parent link="world" />
+    <child link = "base_link" />
+    <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0" />
+  </joint>
+
+  <link name="CAM_support">
+    <visual>
+      <!-- o wrist 2 fica 0.09465 m abaixo de wrist 3 (-0.0445+0.09465)-->
+      <origin rpy="1.57 3.14 0" xyz="0.002 -0.023 0.13915"/>
+      <geometry>
+        <mesh filename="package://custom_codes/STL_Files/CAM_support.STL" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="LightGrey">
+        <color rgba="0.91 0.91 0.88 1.0"/>
+      </material>
+    </visual>
+  </link>
+
+  <joint name="CAM_support_joint" type="fixed">
+   <origin rpy="0 0 0" xyz="0.0 0.0 0.0"/>
+   <parent link="wrist_2_link"/>
+   <child link="CAM_support"/>
+  </joint>
+
+  <link name="d435_realsense" />
+
+  <joint name="wrist3_camera" type="fixed">
+    <parent link="wrist_3_link" />
+    <child link = "d435_realsense" />
+    <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0" />
+  </joint>
+</robot>

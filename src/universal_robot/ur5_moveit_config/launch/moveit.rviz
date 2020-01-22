@@ -368,7 +368,7 @@ Visualization Manager:
       Frames:
         All Enabled: false
         ar_marker_0:
-          Value: false
+          Value: true
         base:
           Value: false
         base_link:

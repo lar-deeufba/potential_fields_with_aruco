@@ -298,10 +298,10 @@ class vel_control:
                 # Add a green sphere at ptFinal position
                 self.add_sphere(ptFinal, self.diam_goal, ColorRGBA(0.0, 1.0, 0.0, 1.0))
             except:
-                    if not rospy.is_shutdown():
-                        self.stop_robot()
-                        raw_input("\nWaiting for /ar_marker_0 frame to be available! Press ENTER after /ar_marker_0 shows up.")
-                        self.CPA_vel_control()
+                if not rospy.is_shutdown():
+                    self.stop_robot()
+                    raw_input("\nWaiting for /ar_marker_0 frame to be available! Press ENTER after /ar_marker_0 shows up.")
+                    self.CPA_vel_control()
         elif self.args.dyntest:
             ptFinal = self.ptFinal
 
