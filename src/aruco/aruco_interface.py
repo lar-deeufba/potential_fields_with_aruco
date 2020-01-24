@@ -7,6 +7,7 @@ import cv2.aruco as aruco
 import glob
 import rospy
 from geometry_msgs.msg import Point, Pose, Quaternion
+from tf.transformations import quaternion_from_euler
 
 class ArucoInterface(object):
 
@@ -14,7 +15,7 @@ class ArucoInterface(object):
         # Size of the ArUco marker in meters
         self.marker_size = 0.05
         #rospy.init_node("aruco_pose_publisher", disable_signals=True)
-        #self.positionPublisher = rospy.Publisher("marker_pose", Point, queue_size=10)
+        #self.positionPublisher = rospy.Publisher("marker_pose", Pose, queue_size=10)
 
     def checkCamera(self):
         """ Checks if the camera is available """
@@ -45,7 +46,7 @@ class ArucoInterface(object):
         except(TypeError):
             print("[ERROR]: Camera is probably not connected.")
 
-    def extract_calibration(self):
+    def extractCalibration(self):
         """ Gets the the camera and distortion matrix from the calibrate_camera method by reading the yaml file. """
         #TODO add function to check if the folder exists because opencv points to other error rather than saying it doesnt exist
         cv_file = cv2.FileStorage("calibration/calibration.yaml", cv2.FILE_STORAGE_READ)
@@ -55,15 +56,25 @@ class ArucoInterface(object):
         cv_file.release()
         return camera_matrix, dist_matrix
 
-    def track_aruco(self):
+    def concatenateIntoPose(self, tx, ty, tz, ori):
+        #TODO
+        pos = Point()
+        pos.x = tx
+        pos.y = ty
+        pos.z = tz
+        orient = Quaternion(ori)
+        pose = Pose()
+        pose = (pos, orient)
+        return pose
+
+    def trackAruco(self):
         """ Tracks the ArUco Marker in real time. """
         marker_size = self.marker_size
         # Getting the parameters from the calibration
-        camera_matrix, dist_matrix = self.extract_calibration()
+        camera_matrix, dist_matrix = self.extractCalibration()
 
         # Performs the checking from the video index for the USB camera
         cameraIndex, foundCamera = self.checkCamera()
-
 
         try:
             cap = cv2.VideoCapture(cameraIndex)
@@ -93,11 +104,12 @@ class ArucoInterface(object):
                     print 'Rotation Vector: ', rvec
                     print 'Translation Vector:', tvec
 
-
-                    #msgToPublish = Point()
-                    #msgToPublish.x = tvec[0][0][0]
-                    #msgToPublish.z = tvec[0][0][2]
-                    #self.positionPublisher.publish(msgToPublish)
+                    # Converts from RPY to Quaternion TODO
+                    #quat = quaternion_from_euler(rvec[0][0][0],rvec[0][0][1],rvec[0][0][2])
+                    #poseMsg = self.concatenateIntoPose(tvec[0][0][0], tvec[0][0][1], tvec[0][0][2], quat)
+                    #print(poseMsg)
+                    
+                    #self.positionPublisher.publish(poseMsg)
 
                     # Drawing axis to represent the orientation of the marker and drawing a square around the identified marker
                     aruco.drawAxis(frame, camera_matrix, dist_matrix, rvec[0], tvec[0], 0.1)
@@ -122,4 +134,4 @@ class ArucoInterface(object):
 
 
 ai = ArucoInterface()
-ai.track_aruco()
+ai.trackAruco()
