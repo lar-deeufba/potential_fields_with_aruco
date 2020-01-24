@@ -3,7 +3,7 @@
 <robot name="robotiq_85_gripper" xmlns:xacro="http://wiki.ros.org/xacro">
 
   <xacro:include filename="$(find robotiq_description)/urdf/robotiq_85_gripper.transmission.xacro" />
-  
+
   <xacro:macro name="robotiq_85_gripper" params="prefix parent *origin">
 
     <joint name="${prefix}robotiq_85_base_joint" type="fixed">
@@ -67,7 +67,7 @@
              iyx = "-0.000001" iyy = "0.000001" iyz = "0.000000"
              izx = "0.000000" izy = "0.000000" izz = "0.000010" />
       </inertial>
-    </link> 
+    </link>
 
     <link name="${prefix}robotiq_85_right_knuckle_link">
       <visual>
@@ -119,7 +119,7 @@
              iyx = "-0.000002" iyy = "0.000021" iyz = "0.000000"
              izx = "0.000000" izy = "0.000000" izz = "0.000020" />
       </inertial>
-    </link> 
+    </link>
 
     <link name="${prefix}robotiq_85_right_finger_link">
       <visual>
@@ -139,7 +139,7 @@
              iyx = "-0.000002" iyy = "0.000021" iyz = "0.000000"
              izx = "0.000000" izy = "0.000000" izz = "0.000020" />
       </inertial>
-    </link> 
+    </link>
 
     <joint name="${prefix}robotiq_85_left_inner_knuckle_joint" type="continuous">
       <parent link="${prefix}robotiq_85_base_link"/>
@@ -235,7 +235,7 @@
              iyx = "0.000000" iyy = "0.000005" iyz = "0.000000"
              izx = "0.000000" izy = "0.000000" izz = "0.000006" />
       </inertial>
-    </link> 
+    </link>
 
     <link name="${prefix}robotiq_85_right_finger_tip_link">
       <visual>
@@ -256,7 +256,7 @@
              izx = "0.000000" izy = "0.000000" izz = "0.000006" />
       </inertial>
     </link>
-    
+
     <!-- Improve grasping physics -->
     <gazebo reference="${prefix}robotiq_85_left_finger_tip_link">
       <kp>1000000.0</kp>
@@ -272,7 +272,7 @@
       <mu2>1.0</mu2>
       <minDepth>0.001</minDepth>
     </gazebo>
-    
+
     <xacro:robotiq_85_gripper_transmission prefix="${prefix}" />
 
   </xacro:macro>

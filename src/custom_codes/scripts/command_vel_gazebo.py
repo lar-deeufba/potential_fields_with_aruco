@@ -9,7 +9,7 @@ import numpy as np
 import argparse
 import rosservice
 
-from std_msgs.msg import Float64MultiArray
+from std_msgs.msg import Float64MultiArray, MultiArrayDimension
 from sensor_msgs.msg import JointState
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 from control_msgs.msg import FollowJointTrajectoryAction, FollowJointTrajectoryGoal
@@ -60,8 +60,13 @@ class vel_control:
         # Topic used to publish vel commands
         self.pub_vel = rospy.Publisher('/joint_group_vel_controller/command', Float64MultiArray,  queue_size=10)
 
+        # Topic used to control the gripper
+        self.griper_pos = rospy.Publisher('/gripper/command', JointTrajectory,  queue_size=10)
+        self.gripper_msg = JointTrajectory()
+        self.gripper_msg.joint_names = ['robotiq_85_left_knuckle_joint']
+
         # visual tools from moveit
-        self.scene = PlanningSceneInterface("base_link")
+        # self.scene = PlanningSceneInterface("base_link")
         self.marker_publisher = rospy.Publisher('visualization_marker2', Marker, queue_size=10)
 
         # Subscriber used to read joint values
@@ -77,7 +82,7 @@ class vel_control:
         print "Waiting for server (pos_based_pos_traj_controller)..."
         self.client.wait_for_server()
         print "Connected to server (pos_based_pos_traj_controller)"
-        rospy.sleep(2)
+        rospy.sleep(1)
 
         # Standard attributes used to send joint position commands
         self.joint_vels = Float64MultiArray()
@@ -98,16 +103,31 @@ class vel_control:
     """
     This function check if the goal position was reached
     """
-    def all_close(self, goal, tolerance = 0.00005):
+    def all_close(self, goal, tolerance = 0.001):
 
         angles_difference = [self.actual_position[i] - goal[i] for i in range(6)]
         total_error = np.sum(angles_difference)
+        print total_error
 
         if abs(total_error) > tolerance:
             return False
 
         print("Total error: ", total_error)
         return True
+
+    """
+    This function is responsible for closing the gripper
+    """
+    def close_gripper(self):
+        self.gripper_msg.points = [JointTrajectoryPoint(positions=[0.6], velocities=[0], time_from_start=rospy.Duration(0.1))]
+        self.griper_pos.publish(self.gripper_msg)
+
+    """
+    This function is responsible for openning the gripper
+    """
+    def open_gripper(self):
+        self.gripper_msg.points = [JointTrajectoryPoint(positions=[0.0], velocities=[0], time_from_start=rospy.Duration(1.0))]
+        self.griper_pos.publish(self.gripper_msg)
 
     """
     The joint states published by /joint_staes of the UR5 robot are in wrong order.
@@ -117,7 +137,8 @@ class vel_control:
     ['shoulder_pan_joint', 'shoulder_lift_joint', 'elbow_joint', 'wrist_1_joint', 'wrist_2_joint', 'wrist_3_joint']
     """
     def ur5_actual_position(self, joint_values_from_ur5):
-        self.th3, self.th2, self.th1, self.th4, self.th5, self.th6 = joint_values_from_ur5.position
+        # rospy.loginfo(joint_values_from_ur5)
+        self.th3, self.robotic, self.th2, self.th1, self.th4, self.th5, self.th6 = joint_values_from_ur5.position
         self.actual_position = [self.th1, self.th2, self.th3, self.th4, self.th5, self.th6]
 
     """
@@ -128,15 +149,6 @@ class vel_control:
     def get_goal_coordinates(self, goal_coordinates):
         self.ptFinal = [goal_coordinates.x, goal_coordinates.y, goal_coordinates.z]
         self.add_sphere(self.ptFinal, self.diam_goal, ColorRGBA(0.0, 1.0, 0.0, 1.0))
-
-    """
-    Stop the robot when the node is killed
-    """
-    def stop_robot(self):
-        # Set zero velocity in order to keep the robot in last calculated position
-        rospy.loginfo("Stopping robot!")
-        self.joint_vels.data = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
-        self.pub_vel.publish(self.joint_vels)
 
     """
     Used to test velcoity control under /joint_group_vel_controller/command topic
@@ -248,6 +260,20 @@ class vel_control:
         return np.transpose(joint_att_force_p), np.transpose(joint_att_force_w)
 
     """
+    Stop the robot when the node is killed
+    """
+    def stop_robot(self):
+        # Set zero velocity in order to keep the robot in last calculated position
+        # self.joint_vels.data = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+        # self.pub_vel.publish(self.joint_vels)
+        rosservice.call_service('/controller_manager/switch_controller', [['pos_based_pos_traj_controller'], ['joint_group_vel_controller'], 1])
+        rospy.sleep(0.001)
+        self.goal.trajectory.points = [JointTrajectoryPoint(positions=self.actual_position, velocities=[0]*6, time_from_start=rospy.Duration(self.initial_time))]
+        self.initial_time += 1
+        self.client.send_goal(self.goal)
+        rospy.loginfo("Stopping robot from rospy.on_shutdown!")
+
+    """
     Function to ensure safety
     """
     def safety_stop(self, ptAtual, wristPt):
@@ -261,15 +287,11 @@ class vel_control:
             # Be careful. Only the limit of the end effector is being watched but the other
             # joint can also exceed this limit and need to be carefully watched by the operator
             rospy.loginfo("High limit of " + str(high_limit) + " exceeded!")
-
             self.stop_robot()
-            rospy.sleep(1)
-            rosservice.call_service('/controller_manager/switch_controller', [['pos_based_pos_traj_controller'], ['joint_group_vel_controller'], 1])
 
             raw_input("\n==== Press enter to home the robot again!")
             joint_values = ur5_vel.get_ik([-0.4, -0.1, 0.5 + 0.15])
             ur5_vel.home_pos(joint_values)
-            rospy.sleep(1)
 
             rosservice.call_service('/controller_manager/switch_controller', [['joint_group_vel_controller'], ['pos_based_pos_traj_controller'], 1])
             raw_input("\n==== Press enter to restart APF function!")
@@ -301,6 +323,7 @@ class vel_control:
                 if not rospy.is_shutdown():
                     self.stop_robot()
                     raw_input("\nWaiting for /ar_marker_0 frame to be available! Press ENTER after /ar_marker_0 shows up.")
+                    rosservice.call_service('/controller_manager/switch_controller', [['joint_group_vel_controller'], ['pos_based_pos_traj_controller'], 1])
                     self.CPA_vel_control()
         elif self.args.dyntest:
             ptFinal = self.ptFinal
@@ -341,9 +364,8 @@ class vel_control:
 
         # Frequency of the velocity controller pubisher
         # Max frequency: 125 Hz
-        rate = rospy.Rate(120)
+        rate = rospy.Rate(125)
 
-        raw_input("\n==== Press enter to start APF")
         while not rospy.is_shutdown():
 
             # Get UR5 Jacobian of each link
@@ -386,8 +408,8 @@ class vel_control:
             # The oriFinal needs to be tracked online because the object will be dynamic
             ptFinal, oriAtual, oriFinal = self.get_tf_param()
 
-            print "oriFinal: ", oriFinal
-            print "oriAtual: ", oriAtual, " \n"
+            # print "oriFinal: ", oriFinal
+            # print "oriAtual: ", oriAtual, " \n"
 
             # Calculate the distance between end effector and goal
             dist_EOF_to_Goal = np.linalg.norm(ptAtual - np.asarray(ptFinal))
@@ -401,20 +423,27 @@ if __name__ == '__main__':
         '''
         Position Control Test
         '''
+        # rospy.sleep(1)
         rosservice.call_service('/controller_manager/switch_controller', [['pos_based_pos_traj_controller'], ['joint_group_vel_controller'], 1])
         ur5_vel = vel_control(arg)
-        ur5_vel.scene.clear()
         raw_input("\n==== Press enter to load home position!")
 
         # Calculate the joint_values equivalent to the initial position before grasping
         joint_values = ur5_vel.get_ik([-0.4, -0.1, 0.5 + 0.15])
         ur5_vel.home_pos(joint_values)
 
+        raw_input("\n==== Press enter to close the gripper!")
+        ur5_vel.close_gripper()
+
+        raw_input("\n==== Press enter to open the gripper!")
+        ur5_vel.open_gripper()
+
         '''
         Velocity Control Test
         '''
-        rosservice.call_service('/controller_manager/switch_controller', [['joint_group_vel_controller'], ['pos_based_pos_traj_controller'], 1])
+        raw_input("\n==== Press enter to load Velocity Controller and start APF")
         rospy.on_shutdown(ur5_vel.stop_robot)
+        rosservice.call_service('/controller_manager/switch_controller', [['joint_group_vel_controller'], ['pos_based_pos_traj_controller'], 1])
         ur5_vel.CPA_vel_control()
 
         # '''

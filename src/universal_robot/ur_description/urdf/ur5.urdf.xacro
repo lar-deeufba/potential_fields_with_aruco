@@ -3,7 +3,6 @@
 
   <xacro:include filename="$(find ur_description)/urdf/ur.transmission.xacro" />
   <xacro:include filename="$(find ur_description)/urdf/ur.gazebo.xacro" />
-  <xacro:include filename="$(find robotiq_description)/urdf/robotiq_85_gripper.urdf.xacro" />
 
   <xacro:macro name="cylinder_inertial" params="radius length mass *origin">
     <inertial>
@@ -72,9 +71,6 @@
     <xacro:property name="wrist_1_length" value="${d4 - elbow_offset - shoulder_offset}" />
     <xacro:property name="wrist_2_length" value="${d5}" />
     <xacro:property name="wrist_3_length" value="${d6}" />
-    <xacro:property name="tool0_offset" value="0.15" />
-
-
     <!--property name="shoulder_height" value="0.089159" /-->
     <!--property name="shoulder_offset" value="0.13585" /-->  <!-- shoulder_offset - elbow_offset + wrist_1_length = 0.10915 -->
     <!--property name="upper_arm_length" value="0.42500" /-->
@@ -382,79 +378,5 @@
       <child link="${prefix}tool0"/>
     </joint>
 
-    <!-- Frame coincident with all-zeros TCP on UR controller -->
-    <link name="${prefix}grasping_link"/>
-    <joint name="${prefix}ur5_joint_grasping_frame" type="fixed">
-      <origin xyz="0 0 ${tool0_offset}" rpy="0 0 0"/>
-      <parent link="${prefix}tool0"/>
-      <child link="${prefix}grasping_link"/>
-    </joint>
   </xacro:macro>
-
-  <!-- GRIPPER CODE -->
-  <link name="robotiq_coupler">
-    <visual>
-      <geometry>
-        <mesh filename="package://robotiq_description/meshes/robotiq_85_coupler.stl" />
-      </geometry>
-      <material name="flat_black"/>
-    </visual>
-    <collision>
-      <geometry>
-        <mesh filename="package://robotiq_description/meshes/robotiq_85_coupler.stl" />
-      </geometry>
-    </collision>
-    <inertial>
-      <origin xyz="2.073e-05   1.45286e-03  -1.1049e-03" rpy="0 0 0" />
-      <mass value="0.168" />
-      <inertia ixx="6.69695624e-05" ixy="5.21511788e-09" ixz="-2.74383009e-08"
-               iyy="7.85088161e-05" iyz="5.41105193e-07" izz="1.41819717e-04"/>
-    </inertial>
-</link>
-
-    <joint name="robotiq_coupler_joint" type="fixed">
-    <origin xyz="0 0 0.004" rpy="0 0 ${-pi/2.0}" />
-    <parent link="tool0"/>
-    <child link="robotiq_coupler"/>
-  </joint>
-  <gazebo reference="robotiq_coupler">
-    <mu1>0.9</mu1>
-    <mu2>0.9</mu2>
-    <material>Gazebo/FlatBlack</material>
-</gazebo>
-
- <!-- Attach the robotiq 85 gripper -->
-  <xacro:robotiq_85_gripper prefix="" parent="robotiq_coupler" >
-    <origin xyz="0 0 0.004" rpy="0 ${-pi/2} ${pi}"/>
-  </xacro:robotiq_85_gripper>
-
-  <!-- Gazebo FT sensor plugin -->
-  <gazebo reference="wrist_3_joint">
-    <provideFeedback>true</provideFeedback>
-  </gazebo>
-  <gazebo>
-    <plugin name="ft_sensor_plugin" filename="libgazebo_ros_ft_sensor.so">
-      <updateRate>250.0</updateRate>
-      <topicName>ft_sensor/raw</topicName>
-      <gaussianNoise>0.0</gaussianNoise>
-      <jointName>wrist_3_joint</jointName>
-    </plugin>
-  </gazebo>
-
-  <!-- Gazebo grasping plugin -->
-  <gazebo>
-    <gripper name="gazebo_gripper">
-      <grasp_check>
-        <attach_steps>2</attach_steps>    <!-- default: 20 -->
-        <detach_steps>2</detach_steps>    <!-- default: 40 -->
-        <min_contact_count>3</min_contact_count>
-      </grasp_check>
-      <gripper_link>robotiq_85_left_finger_tip_link</gripper_link>
-      <gripper_link>robotiq_85_right_finger_tip_link</gripper_link>
-      <palm_link>robotiq_85_base_link</palm_link>
-    </gripper>
-</gazebo>
-
-
-
 </robot>

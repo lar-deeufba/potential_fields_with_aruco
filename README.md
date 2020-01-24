@@ -118,7 +118,24 @@ Change the marker size (in centimeters) of the marker printed version in the lau
 ```
 roslaunch custom_codes PC_CAM_alvar.launch
 ```
+## Sending commands through the action server
 
+If you want to test the position controller, sending commands directly to the /'controller_command'/command topic use
+the following:
+
+```
+rostopic pub -1 /pos_based_pos_traj_controller/command trajectory_msgs/JointTrajectory "header:
+  seq: 0
+  stamp:
+    secs: 0
+    nsecs: 0
+  frame_id: ''
+joint_names: ['shoulder_pan_joint', 'shoulder_lift_joint', 'elbow_joint', 'wrist_1_joint', 'wrist_2_joint', 'wrist_3_joint']
+points:
+  - positions: [1.57, 0, 0, 0, 0, 0]
+    time_from_start: {secs: 1, nsecs: 0}"
+```
+  
 ## Connecting with real UR5
 
 Firstly check the machine IP. The IP configured on the robot must have the last digit different.

@@ -23,14 +23,4 @@
     <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0" />
   </joint>
 
-  <!-- Added by us to integrate the frame from the Intel D435 Realsense -->
-
-  <link name="d435_realsense" />
-
-  <joint name="wrist3_camera" type="fixed">
-    <parent link="wrist_3_link" />
-    <child link = "d435_realsense" />
-    <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0" />
-  </joint>
-
 </robot>

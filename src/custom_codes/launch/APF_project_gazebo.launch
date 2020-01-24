@@ -1,0 +1,60 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="paused" default="false" doc="Starts gazebo in paused mode" />
+  <arg name="gui" default="true" doc="Starts gazebo gui" />
+
+  <!-- startup simulated world -->
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" default="worlds/empty.world"/>
+    <arg name="paused" value="$(arg paused)"/>
+    <arg name="gui" value="$(arg gui)"/>
+  </include>
+
+  <!-- Arguments used to test APF orientation technique -->
+  <arg name="pc_camera_test" default="false" />
+  <arg name="kinect2_test" default="false" />
+  <arg name="fixed" default="true" />
+
+  <!-- Remap follow_joint_trajectory -->
+  <!-- <remap if="$(arg sim)" from="/follow_joint_trajectory" to="/arm_controller/follow_joint_trajectory"/> -->
+
+  <!-- Load UR5 URDF -->
+  <param name="robot_description" command="$(find xacro)/xacro --inorder '$(find custom_codes)/urdf/ur5_with_cam.urdf.xacro'" />
+
+  <!-- push robot_description to factory and spawn robot in gazebo -->
+  <node name="spawn_gazebo_model_test" pkg="gazebo_ros" type="spawn_model" args="-urdf -param robot_description -model robot -z 0.1" respawn="false" output="screen" />
+
+  <!-- Load joint names into the parameter server -->
+  <rosparam file="$(find custom_codes)/config/joint_names.yaml" command="load" />
+
+  <!-- Load Robotiq Gripper Controller -->
+  <rosparam file="$(find custom_codes)/controller/ur5gripper_controllers.yaml" command="load"/>
+  <node name="gripper_controller_spawner" pkg="controller_manager" type="spawner" args="gripper"/>
+
+  <!-- Load UR5 Controllers -->
+  <!-- load velocity and position controllers -->
+  <rosparam file="$(find custom_codes)/controller/ur5_controllers.yaml" command="load"/>
+
+  <include file="$(find ur_gazebo)/launch/controller_utils.launch"/>
+  <arg name="controllers" default="pos_based_pos_traj_controller"/>
+
+  <!-- load other controllers RUN -->
+  <node name="ros_control_controller_spawner" pkg="controller_manager" type="spawner" respawn="false"
+    output="screen" args="$(arg controllers)" />
+
+  <arg name="stopped_controllers" default="joint_group_vel_controller"/>
+
+  <!-- load other controller -->
+  <node name="ros_control_controller_manager" pkg="controller_manager" type="controller_manager" respawn="false"
+    output="screen" args="load $(arg stopped_controllers)" />
+
+  <!-- Load frames for test -->
+  <node if="$(arg pc_camera_test)" pkg="tf" type="static_transform_publisher" name="camera_link_broadcaster"
+  			args="-0.04 0.3 0.48 1.57 0.0 -1.57 /base_link /camera_link 40" />
+
+  <node if="$(arg kinect2_test)" pkg="tf" type="static_transform_publisher" name="kinect2_link_broadcaster"
+        args="-0.1 0.0 0.7 1.57 0.0 -1.57 /base_link /kinect2_link 40" />
+
+  <node if="$(arg fixed)" pkg="tf" type="static_transform_publisher" name="fixed_link_broadcaster"
+        args="-0.5 -0.1 0.033 -0.6 0.0 0.0 /base_link /ar_marker_0 40" />
+</launch>
