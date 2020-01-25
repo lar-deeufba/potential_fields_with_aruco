@@ -1,4 +1,4 @@
 <launch>
     <!-- Run ArUco interface Python script -->
-    <node pkg="potential_fields_with_aruco" type="aruco_interface.py" name="aruco_pose_publisher" output="screen" cwd="node" />
+    <node pkg="aruco_interface" type="aruco_interface.py" name="aruco_pose_publisher" output="screen" cwd="node" />
 </launch>
