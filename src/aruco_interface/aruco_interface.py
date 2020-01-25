@@ -61,6 +61,7 @@ class ArucoInterface(object):
         """ Concatenates the translation and rotation vectors from the detection to a Pose message. """
         hdr = Header()
         # TODO: Check if it creates the frame or do we need to do it manually on the xacro
+        # frameId = "aruco_marker" + id
         hdr.frame_id = "aruco_marker"
         hdr.stamp = rospy.Time.now()
         pos = Point()
@@ -106,8 +107,6 @@ class ArucoInterface(object):
                 if np.all(ids is not None):
                     # Retrieves the rotation and translation vector, i.e orientation and position from the camera wrt. marker
                     rvec, tvec, _ = aruco.estimatePoseSingleMarkers(corners[0], marker_size, camera_matrix, dist_matrix)
-                    #print 'Rotation Vector: ', rvec
-                    #print 'Translation Vector:', tvec
 
                     # Converts from RPY to Quaternion
                     quat = quaternion_from_euler(rvec[0][0][0],rvec[0][0][1],rvec[0][0][2])
