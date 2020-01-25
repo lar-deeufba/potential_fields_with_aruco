@@ -55,8 +55,4 @@
 
   <!-- Convert joint states to /tf tranforms -->
   <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"/>
-
-  <!-- Load Robotiq Gripper Controller -->
-  <!-- <rosparam file="$(find custom_codes)/controller/ur5gripper_controllers.yaml" command="load"/>
-  <node name="gripper_controller_spawner" pkg="controller_manager" type="spawner" args="gripper"/> -->
 </launch>

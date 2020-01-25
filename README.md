@@ -6,47 +6,58 @@ This project is related to the application of the Adaptive Artificial Potential 
 
 Please check the paper for further info: [http://proceedings.science/p/111278]
 
-## Required packages
+## Required packages - Kinetic Version
 
 - Moveit Kinetic [https://moveit.ros.org/install/]
 - Robotiq Gripper [https://github.com/crigroup/robotiq]
 - Universal Robot [https://github.com/ros-industrial/universal_robot]
-- Ur_modern_driver [https://github.com/ros-industrial/ur_modern_driver/tree/kinetic-devel]
+- ur_modern_driver [https://github.com/ros-industrial/ur_modern_driver]
 
 Install any dependencies you might have missed by using this command in catkin_ws folder
 rosdep install --from-paths src --ignore-src -r -y
 
-## Changes in universal_robot pkg
+## Test Velocity Control with Gazebo
 
-If you prefer to download Universal_robot package from its original repository please substitute the following files for compliance with the proposed Artificial Potential Field method
-
-Substitute src/files_to_substitute/ur5.urdf.xacro into universal_robot/ur_description/urdf folder
-Substitute src/files_to_substitute/ur5gripper_controllers.yaml into universal_robot/ur_gazebo/controller folder
-Substitute src/files_to_substitute/ur5.launch into universal_robot/ur_gazebo/launch folder
-Substitute src/files_to_substitute/controllers.yaml into universal_robot/ur5_moveit_config/config
-Substitute src/files_to_substitute/ur5.srdf into universal_robot/ur5_moveit_config/config
-
-## Test Velocity Control (Usage)
-
-The ur5.launch was modified to not start gazebo while velocity command is still being tested.
-Wait for the message "You can start planning now!" to show before running the next command.
+Gazebo simulation is used if the real robot is not available.
 
 ```
-roslaunch custom_codes APF_project.launch
-```
-
-! IMPORTANT ! - Remember to start URSIM before launching ur5_ros_control
-Start the ur modern drive to connect with URSIM (3.9.1 version) - Remember to set DHCP and check the ip in the terminal. The IP is 127.0.1.1 as default.
-
-```
-roslaunch ur_modern_driver ur5_ros_control.launch robot_ip:=127.0.1.1
+roslaunch custom_codes APF_project_gazebo.launch
 ```
 
 Start the command_vel node in order to check if velocity control is working properly (check arguments).
 The following command will turn on orientation control (if desired).
 
 ```
-rosrun custom_codes command_vel.py --armarker --OriON
+rosrun custom_codes command_vel_gazebo.py --armarker --OriON
+```
+
+## Test Velocity Control with RVIZ
+
+RVIZ mode is used when the real robot is connected. In this case, Gazebo will not start.
+Wait for the message "You can start planning now!" to show before running the next command.
+
+```
+roslaunch custom_codes APF_project_rviz.launch
+```
+
+! IMPORTANT ! - Remember to start URSIM before launching ur5_ros_control
+Start the ur modern drive to connect with URSIM (3.9.1 version) - Remember to set DHCP and check the ip in the terminal. The IP is 127.0.1.1 as default.
+
+```
+roslaunch custom_codes ur5_ros_control.launch robot_ip:=127.0.1.1
+```
+
+If you don't have a webcam connected, launch this:
+
+```
+roslaunch custom_codes tf_transforms.launch
+```
+
+Start the command_vel node.
+The following command will turn on orientation control (if desired).
+
+```
+rosrun custom_codes command_vel_rviz.py --armarker --OriON
 ```
 
 ### Optional commands (Related to Test Velocity Control)
@@ -135,7 +146,7 @@ points:
   - positions: [1.57, 0, 0, 0, 0, 0]
     time_from_start: {secs: 1, nsecs: 0}"
 ```
-  
+
 ## Connecting with real UR5
 
 Firstly check the machine IP. The IP configured on the robot must have the last digit different.

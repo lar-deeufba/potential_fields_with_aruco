@@ -60,10 +60,6 @@ class vel_control:
         # Topic used to publish vel commands
         self.pub_vel = rospy.Publisher('/joint_group_vel_controller/command', Float64MultiArray,  queue_size=10)
 
-        # Topic used to control the gripper
-        self.griper_pos = rospy.Publisher('/gripper/command', JointTrajectory,  queue_size=10)
-        self.gripper_msg = JointTrajectory()
-        self.gripper_msg.joint_names = ['robotiq_85_left_knuckle_joint']
         # visual tools from moveit
         self.scene = PlanningSceneInterface("base_link")
         self.marker_publisher = rospy.Publisher('visualization_marker2', Marker, queue_size=10)
@@ -425,11 +421,6 @@ if __name__ == '__main__':
         joint_values = ur5_vel.get_ik([-0.4, -0.1, 0.5 + 0.15])
         ur5_vel.home_pos(joint_values)
 
-        # raw_input("\n==== Press enter to close the gripper!")
-        # ur5_vel.close_gripper()
-        #
-        # raw_input("\n==== Press enter to open the gripper!")
-        # ur5_vel.open_gripper()
         '''
         Velocity Control Test
         '''
