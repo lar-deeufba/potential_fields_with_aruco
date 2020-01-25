@@ -175,9 +175,9 @@ roslaunch ur_modern_driver ur5_ros_control.launch robot_ip:=192.168.131.12
 ## Contributors
 
 This work was made possible by the teamwork of the LaR fellows:
-- Caio Viturino
-- Henrique Poleselo
-- Ubiratan de Melo
+* **Caio Viturino** - [caiobarrosv](https://github.com/caiobarrosv)
+* **Henrique Poleselo** - [hpoleselo](https://github.com/hpoleselo)
+* **Ubiratan de Melo** - [Ubira](https://github.com/Ubira)
 
 Supervised by:
- - Prof. Dr. André Gustavo Scolari Conceição
+ * **Prof. Dr. André Gustavo Scolari Conceição** - [ascolari](https://github.com/ascolari)
