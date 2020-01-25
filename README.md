@@ -1,4 +1,4 @@
-## Project - Artificial Potential Field with ArUco Marker
+# Project - Artificial Potential Field with ArUco Marker
 
 ## Description
 
@@ -60,7 +60,7 @@ The following command will turn on orientation control (if desired).
 rosrun custom_codes command_vel_rviz.py --armarker --OriON
 ```
 
-### Optional commands (Related to Test Velocity Control)
+## Optional commands (Related to Test Velocity Control)
 
 If you want to test velocity control with a dynamic goal published by a node (without Kinect), first run this node before command_vel.py and then run command_vel.py with --dyntest argument.
 
