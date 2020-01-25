@@ -6,7 +6,8 @@ import cv2
 import cv2.aruco as aruco
 import glob
 import rospy
-from geometry_msgs.msg import Point, Pose, Quaternion
+from geometry_msgs.msg import Point, Pose, Quaternion, PoseStamped
+from std_msgs.msg import Header
 from tf.transformations import quaternion_from_euler
 
 class ArucoInterface(object):
@@ -15,7 +16,7 @@ class ArucoInterface(object):
         # Size of the ArUco marker in meters
         self.marker_size = 0.05
         rospy.init_node("aruco_pose_publisher", disable_signals=True)
-        self.posePublisher = rospy.Publisher("marker_pose", Pose, queue_size=10)
+        self.posePublisher = rospy.Publisher("marker_pose", PoseStamped, queue_size=10)
 
     def checkCamera(self):
         """ Checks if the camera is available """
@@ -58,13 +59,18 @@ class ArucoInterface(object):
 
     def concatenateIntoPose(self, tx, ty, tz, ori):
         """ Concatenates the translation and rotation vectors from the detection to a Pose message. """
+        hdr = Header()
+        # TODO: Check if it creates the frame or do we need to do it manually on the xacro
+        hdr.frame_id = "aruco_marker"
+        hdr.stamp = rospy.Time.now()
         pos = Point()
         pos.x = tx
         pos.y = ty
         pos.z = tz
         orient = Quaternion(ori[0], ori[1], ori[2], ori[3])
         pose = Pose(pos, orient)
-        return pose
+        ps = PoseStamped(hdr, pose)
+        return ps
 
     def trackAruco(self):
         """ Tracks the ArUco Marker in real time. """
@@ -105,8 +111,8 @@ class ArucoInterface(object):
 
                     # Converts from RPY to Quaternion
                     quat = quaternion_from_euler(rvec[0][0][0],rvec[0][0][1],rvec[0][0][2])
-                    poseMsg = self.concatenateIntoPose(tvec[0][0][0], tvec[0][0][1], tvec[0][0][2], quat)
-                    self.posePublisher.publish(poseMsg)
+                    poseStampedMsg = self.concatenateIntoPose(tvec[0][0][0], tvec[0][0][1], tvec[0][0][2], quat)
+                    self.posePublisher.publish(poseStampedMsg)
 
                     # Drawing axis to represent the orientation of the marker and drawing a square around the identified marker
                     aruco.drawAxis(frame, camera_matrix, dist_matrix, rvec[0], tvec[0], 0.1)
