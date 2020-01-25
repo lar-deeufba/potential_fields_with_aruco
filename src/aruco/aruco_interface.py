@@ -14,8 +14,8 @@ class ArucoInterface(object):
     def __init__(self):
         # Size of the ArUco marker in meters
         self.marker_size = 0.05
-        #rospy.init_node("aruco_pose_publisher", disable_signals=True)
-        #self.positionPublisher = rospy.Publisher("marker_pose", Pose, queue_size=10)
+        rospy.init_node("aruco_pose_publisher", disable_signals=True)
+        self.posePublisher = rospy.Publisher("marker_pose", Pose, queue_size=10)
 
     def checkCamera(self):
         """ Checks if the camera is available """
@@ -57,14 +57,13 @@ class ArucoInterface(object):
         return camera_matrix, dist_matrix
 
     def concatenateIntoPose(self, tx, ty, tz, ori):
-        #TODO
+        """ Concatenates the translation and rotation vectors from the detection to a Pose message. """
         pos = Point()
         pos.x = tx
         pos.y = ty
         pos.z = tz
-        orient = Quaternion(ori)
-        pose = Pose()
-        pose = (pos, orient)
+        orient = Quaternion(ori[0], ori[1], ori[2], ori[3])
+        pose = Pose(pos, orient)
         return pose
 
     def trackAruco(self):
@@ -84,7 +83,7 @@ class ArucoInterface(object):
                 if ret is True:
                     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                 else:
-                    print("[ERROR]: Ret is not true")
+                    print("[ERROR]: Some error with the frames, restart your program.")
                     break
                 
                 # Using the 6x6 dictionary from ArUco
@@ -101,15 +100,13 @@ class ArucoInterface(object):
                 if np.all(ids is not None):
                     # Retrieves the rotation and translation vector, i.e orientation and position from the camera wrt. marker
                     rvec, tvec, _ = aruco.estimatePoseSingleMarkers(corners[0], marker_size, camera_matrix, dist_matrix)
-                    print 'Rotation Vector: ', rvec
-                    print 'Translation Vector:', tvec
+                    #print 'Rotation Vector: ', rvec
+                    #print 'Translation Vector:', tvec
 
-                    # Converts from RPY to Quaternion TODO
-                    #quat = quaternion_from_euler(rvec[0][0][0],rvec[0][0][1],rvec[0][0][2])
-                    #poseMsg = self.concatenateIntoPose(tvec[0][0][0], tvec[0][0][1], tvec[0][0][2], quat)
-                    #print(poseMsg)
-                    
-                    #self.positionPublisher.publish(poseMsg)
+                    # Converts from RPY to Quaternion
+                    quat = quaternion_from_euler(rvec[0][0][0],rvec[0][0][1],rvec[0][0][2])
+                    poseMsg = self.concatenateIntoPose(tvec[0][0][0], tvec[0][0][1], tvec[0][0][2], quat)
+                    self.posePublisher.publish(poseMsg)
 
                     # Drawing axis to represent the orientation of the marker and drawing a square around the identified marker
                     aruco.drawAxis(frame, camera_matrix, dist_matrix, rvec[0], tvec[0], 0.1)
