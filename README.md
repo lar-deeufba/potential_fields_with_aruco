@@ -9,6 +9,7 @@ Please check the paper for further info: [http://proceedings.science/p/111278]
 ## Required packages - Kinetic Version
 
 - Moveit Kinetic [https://moveit.ros.org/install/]
+- Moveit Python [https://github.com/mikeferguson/moveit_python]
 - Robotiq Gripper [https://github.com/crigroup/robotiq]
 - Universal Robot [https://github.com/ros-industrial/universal_robot]
 - ur_modern_driver [https://github.com/ros-industrial/ur_modern_driver]
@@ -22,6 +23,12 @@ Gazebo simulation is used if the real robot is not available.
 
 ```
 roslaunch custom_codes APF_project_gazebo.launch
+```
+
+If you don't have a webcam connected, launch this:
+
+```
+rosrun custom_codes tf_nodes.py
 ```
 
 Start the command_vel node in order to check if velocity control is working properly (check arguments).
@@ -80,13 +87,13 @@ Launch kinect driver using iai_kinect2 package
 Please follow the instruction of iai_kinect2 installation in its default repository [https://github.com/code-iai/iai_kinect2]
 
 ```
-roslaunch kinect2_bridge kinect2_bridge.launch depth_method:=opengl reg_method:=cpu
+roslaunch custom_codes kinect2_bridge.launch depth_method:=opengl reg_method:=cpu
 ```
 
 Launch ar_track_alvar
 
 ```
-roslaunch ar_track_alvar pr2_indiv_no_kinect_caio.launch
+roslaunch ar_track_alvar Kinect2_alvar.launch
 ```
 
 Load the Kinect2 TF Frame
