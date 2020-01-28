@@ -8,18 +8,54 @@ Please check the paper for further info: [http://proceedings.science/p/111278]
 
 ## Required packages - Kinetic Version
 
-- Moveit Kinetic [https://moveit.ros.org/install/]
-- Moveit Python [https://github.com/mikeferguson/moveit_python]
-- Robotiq Gripper [https://github.com/crigroup/robotiq]
-- Universal Robot [https://github.com/ros-industrial/universal_robot]
-- ur_modern_driver [https://github.com/ros-industrial/ur_modern_driver]
+- [LAR Gazebo](https://github.com/ericksuzart/lar_gazebo)
+- [Moveit Kinetic](https://moveit.ros.org/install/)
+- [Moveit Python](https://github.com/mikeferguson/moveit_python)
+- [Robotiq Gripper](https://github.com/crigroup/robotiq)
+- [Universal Robot](https://github.com/ros-industrial/universal_robot)
+- [ur_modern_driver](https://github.com/ros-industrial/ur_modern_driver)
 
 Install any dependencies you might have missed by using this command in catkin_ws folder
 rosdep install --from-paths src --ignore-src -r -y
 
+## Test Velocity Control with RVIZ
+
+RVIZ mode is used when the real robot is connected. In this case, Gazebo will not start.
+Wait for the message "You can start planning now!" to show before running the next command.
+
+```
+roslaunch custom_codes APF_project_rviz.launch
+```
+> **_NOTE:_**  Remember to start URSIM before launching ur5_ros_control
+Start the ur modern drive to connect with URSIM (3.9.1 version) - Remember to set DHCP and check the ip in the terminal. The IP is 127.0.1.1 as default.
+
+```
+roslaunch custom_codes ur5_ros_control.launch robot_ip:=127.0.1.1
+```
+
+If you don't have a webcam connected, launch this:
+
+```
+rosrun custom_codes tf_node.py
+```
+
+Start the command_vel node.
+The following command will turn on orientation control (if desired).
+
+```
+rosrun custom_codes command_vel_rviz.py --armarker --OriON
+```
+
 ## Test Velocity Control with Gazebo
 
+> **_NOTE:_**  Gazebo simulation is not working properly due to the lack of gravity compensation controller.
+In other other, velocity controller cannot work well without compensation in Gazebo.
+
 Gazebo simulation is used if the real robot is not available.
+If it is available, please use RVIZ and only RVIZ instead.
+
+> **_NOTE:_** The Gazebo environment is started in paused mode (to set initial joint angles).
+Remember to PLAY the simulation after gazebo starts.
 
 ```
 roslaunch custom_codes APF_project_gazebo.launch
@@ -31,40 +67,24 @@ If you don't have a webcam connected, launch this:
 rosrun custom_codes tf_nodes.py
 ```
 
+Spawn a sphere model to represent the goal
+
+```
+rosrun custom_codes spawn_model.py
+```
+
+While gravity compensation is not yet implement, the gravity is set to zero for the robot to reach the goal.
+The real UR5 has it implemented in its controller. In other words, it is not necessary to have this kind of control when the real robot is connected.
+
+```
+rosrun custom_codes change_gazebo_properties.py
+```
+
 Start the command_vel node in order to check if velocity control is working properly (check arguments).
 The following command will turn on orientation control (if desired).
 
 ```
 rosrun custom_codes command_vel_gazebo.py --armarker --OriON
-```
-
-## Test Velocity Control with RVIZ
-
-RVIZ mode is used when the real robot is connected. In this case, Gazebo will not start.
-Wait for the message "You can start planning now!" to show before running the next command.
-
-```
-roslaunch custom_codes APF_project_rviz.launch
-```
-
-! IMPORTANT ! - Remember to start URSIM before launching ur5_ros_control
-Start the ur modern drive to connect with URSIM (3.9.1 version) - Remember to set DHCP and check the ip in the terminal. The IP is 127.0.1.1 as default.
-
-```
-roslaunch custom_codes ur5_ros_control.launch robot_ip:=127.0.1.1
-```
-
-If you don't have a webcam connected, launch this:
-
-```
-roslaunch custom_codes tf_transforms.launch
-```
-
-Start the command_vel node.
-The following command will turn on orientation control (if desired).
-
-```
-rosrun custom_codes command_vel_rviz.py --armarker --OriON
 ```
 
 ## Optional commands (Related to Test Velocity Control)

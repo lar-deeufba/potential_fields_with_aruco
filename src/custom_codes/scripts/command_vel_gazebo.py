@@ -61,9 +61,9 @@ class vel_control:
         self.pub_vel = rospy.Publisher('/joint_group_vel_controller/command', Float64MultiArray,  queue_size=10)
 
         # Topic used to control the gripper
-        self.griper_pos = rospy.Publisher('/gripper/command', JointTrajectory,  queue_size=10)
-        self.gripper_msg = JointTrajectory()
-        self.gripper_msg.joint_names = ['robotiq_85_left_knuckle_joint']
+        # self.griper_pos = rospy.Publisher('/gripper/command', JointTrajectory,  queue_size=10)
+        # self.gripper_msg = JointTrajectory()
+        # self.gripper_msg.joint_names = ['robotiq_85_left_knuckle_joint']
 
         # visual tools from moveit
         # self.scene = PlanningSceneInterface("base_link")
@@ -103,7 +103,7 @@ class vel_control:
     """
     This function check if the goal position was reached
     """
-    def all_close(self, goal, tolerance = 0.001):
+    def all_close(self, goal, tolerance = 0.015):
 
         angles_difference = [self.actual_position[i] - goal[i] for i in range(6)]
         total_error = np.sum(angles_difference)
@@ -139,6 +139,7 @@ class vel_control:
     def ur5_actual_position(self, joint_values_from_ur5):
         # rospy.loginfo(joint_values_from_ur5)
         self.th3, self.robotic, self.th2, self.th1, self.th4, self.th5, self.th6 = joint_values_from_ur5.position
+        # self.th3, self.th2, self.th1, self.th4, self.th5, self.th6 = joint_values_from_ur5.position
         self.actual_position = [self.th1, self.th2, self.th3, self.th4, self.th5, self.th6]
 
     """
@@ -201,8 +202,7 @@ class vel_control:
             while not self.all_close(home_pos) and not rospy.is_shutdown():
                 self.client.send_goal(self.goal)
                 self.client.wait_for_result()
-            if self.all_close(home_pos):
-                print("The arm is in home position!  \n")
+            print("The arm is in home position!  \n")
         except KeyboardInterrupt:
             self.client.cancel_goal()
             raise
@@ -266,12 +266,12 @@ class vel_control:
         # Set zero velocity in order to keep the robot in last calculated position
         # self.joint_vels.data = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
         # self.pub_vel.publish(self.joint_vels)
+        rospy.loginfo("Stopping robot!")
         rosservice.call_service('/controller_manager/switch_controller', [['pos_based_pos_traj_controller'], ['joint_group_vel_controller'], 1])
-        rospy.sleep(0.001)
-        self.goal.trajectory.points = [JointTrajectoryPoint(positions=self.actual_position, velocities=[0]*6, time_from_start=rospy.Duration(self.initial_time))]
-        self.initial_time += 1
-        self.client.send_goal(self.goal)
-        rospy.loginfo("Stopping robot from rospy.on_shutdown!")
+        rospy.sleep(0.1)
+        raw_input("\n==== Press enter to home the robot again!")
+        joint_values = ur5_vel.get_ik([-0.4, -0.1, 0.5 + 0.15])
+        ur5_vel.home_pos(joint_values)
 
     """
     Function to ensure safety
@@ -281,20 +281,16 @@ class vel_control:
         high_limit = 0.03
 
         # Does not allow wrist_1_link to move above 20 cm relative to base_link
-        high_limit_wrist_pt = 0.2
+        high_limit_wrist_pt = 0.15
 
         if ptAtual[-1] < high_limit or wristPt[-1] < high_limit_wrist_pt:
             # Be careful. Only the limit of the end effector is being watched but the other
             # joint can also exceed this limit and need to be carefully watched by the operator
             rospy.loginfo("High limit of " + str(high_limit) + " exceeded!")
             self.stop_robot()
-
-            raw_input("\n==== Press enter to home the robot again!")
-            joint_values = ur5_vel.get_ik([-0.4, -0.1, 0.5 + 0.15])
-            ur5_vel.home_pos(joint_values)
-
+            raw_input("\n==== Press enter to load Velocity Controller and start APF")
             rosservice.call_service('/controller_manager/switch_controller', [['joint_group_vel_controller'], ['pos_based_pos_traj_controller'], 1])
-            raw_input("\n==== Press enter to restart APF function!")
+            
 
     """
     Gets ptFinal and oriAtual
@@ -343,7 +339,8 @@ class vel_control:
         dist_att = 0.1  # Influence distance in workspace
         dist_att_config = 0.2  # Influence distance in configuration space
         alfa_geral = 1.5 # multiply each alfa (position and rotation) equally
-        alfa = 4*alfa_geral  # Grad step of positioning - Default: 0.5
+        gravity_compensation = 10
+        alfa = 4*gravity_compensation*alfa_geral  # Grad step of positioning - Default: 0.5
         alfa_rot = 4*alfa_geral  # Grad step of orientation - Default: 0.4
 
         # Return the end effector location relative to the base_link
@@ -351,13 +348,10 @@ class vel_control:
 
         # Get ptFinal published by ar_marker_0 frame and the orientation from grasping_link to ar_marker_0
         ptFinal, oriAtual, oriFinal = self.get_tf_param()
-        print "oriFinal (ar_marker_0 from base_link): ", oriFinal
-        print "oriAtual (grasping_link from ar_marker_0): ", oriAtual, " \n"
 
         # Calculate the correction of the orientation relative to the actual orientation
         R, P, Y = -1*oriAtual[0], -1*oriAtual[1], 0.0
         corr = [R, P, Y]
-        print "Correction angle (from quat multiply): ", corr
 
         # Calculate the distance between end effector and goal
         dist_EOF_to_Goal = np.linalg.norm(ptAtual - np.asarray(ptFinal))
@@ -408,11 +402,12 @@ class vel_control:
             # The oriFinal needs to be tracked online because the object will be dynamic
             ptFinal, oriAtual, oriFinal = self.get_tf_param()
 
-            # print "oriFinal: ", oriFinal
-            # print "oriAtual: ", oriAtual, " \n"
+            # Reach the position above the goal (object)
+            # ptFinal[-1] += 0.1
 
             # Calculate the distance between end effector and goal
             dist_EOF_to_Goal = np.linalg.norm(ptAtual - np.asarray(ptFinal))
+            print "Distance to Goal: ", dist_EOF_to_Goal
 
             rate.sleep()
 
@@ -432,11 +427,11 @@ if __name__ == '__main__':
         joint_values = ur5_vel.get_ik([-0.4, -0.1, 0.5 + 0.15])
         ur5_vel.home_pos(joint_values)
 
-        raw_input("\n==== Press enter to close the gripper!")
-        ur5_vel.close_gripper()
-
-        raw_input("\n==== Press enter to open the gripper!")
-        ur5_vel.open_gripper()
+        # raw_input("\n==== Press enter to close the gripper!")
+        # ur5_vel.close_gripper()
+        #
+        # raw_input("\n==== Press enter to open the gripper!")
+        # ur5_vel.open_gripper()
 
         '''
         Velocity Control Test

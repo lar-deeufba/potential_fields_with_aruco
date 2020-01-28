@@ -11,7 +11,7 @@ if __name__ == '__main__':
     rate = rospy.Rate(125)
     print "Publishing ar_marker_0 link"
     while not rospy.is_shutdown():
-        br.sendTransform((-0.5, -0.1, 0.033),
+        br.sendTransform((-0.5, 0.1, 0.05),
                          tf.transformations.quaternion_from_euler(0.0, 0.0, -0.6),
                          rospy.Time.now(),
                          "ar_marker_0",

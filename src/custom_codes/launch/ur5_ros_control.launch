@@ -40,7 +40,11 @@
     <param name="shutdown_on_disconnect" type="bool" value="$(arg shutdown_on_disconnect)"/>
   </node>
 
-  <param name="robot_description" command="$(find xacro)/xacro --inorder '$(find custom_codes)/urdf/ur5_with_cam.urdf.xacro'" />
+  <!-- Load UR5 URDF -->
+  <param name="robot_description"
+         command="$(find xacro)/xacro --inorder '$(find custom_codes)/urdf/ur5_with_cam.urdf.xacro'
+                  robot_pose:=0.84
+                  load_table:=true"/>
 
   <!-- Load controller settings -->
   <rosparam file="$(find ur_modern_driver)/config/ur5_controllers.yaml" command="load"/>
