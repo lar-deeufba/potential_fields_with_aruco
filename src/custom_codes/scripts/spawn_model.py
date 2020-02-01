@@ -15,7 +15,8 @@ from tf import TransformListener
 
 rospack = rospkg.RosPack()
 Home = rospack.get_path('custom_codes')
-path = Home + '/models/box/custom_box.sdf'
+# path = Home + '/models/box/custom_box.sdf'
+path = Home + '/models/box/model.sdf'
 
 
 class Moving():

@@ -1,12 +1,31 @@
 # Project - Artificial Potential Field with ArUco Marker
 
-## Description
+------------
+
+<a id="top"></a>
+### Contents
+1. [Description](#1.0)
+2. [Required packages - Kinetic Version](#2.0)
+3. [Test Velocity Control with RVIZ](#3.0)
+4. [Test Velocity Control with Gazebo and CAM (Gazebo plugin)](#4.0)
+5. [Optional commands (Related to Test Velocity Control)](#5.0)
+6. [Test Computer Vision Tools with Kinect](#6.0)
+7. [How to use PC cam to track ar_tracker_alvar markers](#7.0)
+8. [Sending commands through the action server](#8.0)
+9. [Connecting with real UR5](#9.0)
+10. [Contributors](#10.0)
+
+------------
+
+<a name="1.0"></a>
+### 1.0 Description
 
 This project is related to the application of the Adaptive Artificial Potential Field with ArUco Marker for grasping and collision avoidance using velocity control of ur_modern_driver.
 
 Please check the paper for further info: [http://proceedings.science/p/111278]
 
-## Required packages - Kinetic Version
+<a name="2.0"></a>
+### 2.0 Required packages - Kinetic Version
 
 - [LAR Gazebo](https://github.com/ericksuzart/lar_gazebo)
 - [Moveit Kinetic](https://moveit.ros.org/install/)
@@ -18,7 +37,8 @@ Please check the paper for further info: [http://proceedings.science/p/111278]
 Install any dependencies you might have missed by using this command in catkin_ws folder
 rosdep install --from-paths src --ignore-src -r -y
 
-## Test Velocity Control with RVIZ
+<a name="3.0"></a>
+### 3.0 Test Velocity Control with RVIZ
 
 RVIZ mode is used when the real robot is connected. In this case, Gazebo will not start.
 Wait for the message "You can start planning now!" to show before running the next command.
@@ -46,7 +66,8 @@ The following command will turn on orientation control (if desired).
 rosrun custom_codes command_vel_rviz.py --armarker --OriON
 ```
 
-## Test Velocity Control with Gazebo
+<a name="4.0"></a>
+### 4.0 Test Velocity Control with Gazebo and CAM (Gazebo plugin)
 
 > **_NOTE:_**  Gazebo simulation is not working properly due to the lack of gravity compensation controller.
 In other other, velocity controller cannot work well without compensation in Gazebo.
@@ -84,10 +105,16 @@ Start the command_vel node in order to check if velocity control is working prop
 The following command will turn on orientation control (if desired).
 
 ```
-rosrun custom_codes command_vel_gazebo.py --armarker --OriON
+rosrun custom_codes command_vel_gazebo.py --armarker --OriON --gazebo
 ```
 
-## Optional commands (Related to Test Velocity Control)
+Start rqt_image_view and select /ur5/camera1/image_raw topic to see the image being published
+```
+rqt_image_view
+```
+
+<a name="5.0"></a>
+#### 5.0 Optional commands (Related to Test Velocity Control)
 
 If you want to test velocity control with a dynamic goal published by a node (without Kinect), first run this node before command_vel.py and then run command_vel.py with --dyntest argument.
 
@@ -101,7 +128,8 @@ If required, check if joint_group_vel_controller is running by calling:
 rosservice call /controller_manager/list_controllers
 ```
 
-## Test Computer Vision Tools (Kinect)
+<a name="6.0"></a>
+### 6.0 Test Computer Vision Tools with Kinect
 
 Launch kinect driver using iai_kinect2 package
 Please follow the instruction of iai_kinect2 installation in its default repository [https://github.com/code-iai/iai_kinect2]
@@ -124,7 +152,8 @@ roslaunch custom_codes tf_transforms.launch kinect2_test:=true
 
 Remember to run command_vel node with --armarker argument
 
-## How to use PC cam to track ar_tracker_alvar markers
+<a name="7.0"></a>
+### 7.0 How to use PC cam to track ar_tracker_alvar markers
 
 Calibrate your PC CAM using this package
 
@@ -156,7 +185,9 @@ Change the marker size (in centimeters) of the marker printed version in the lau
 ```
 roslaunch custom_codes PC_CAM_alvar.launch
 ```
-## Sending commands through the action server
+
+<a name="8.0"></a>
+### 8.0 Sending commands through the action server
 
 If you want to test the position controller, sending commands directly to the /'controller_command'/command topic use
 the following:
@@ -174,7 +205,8 @@ points:
     time_from_start: {secs: 1, nsecs: 0}"
 ```
 
-## Connecting with real UR5
+<a name="9.0"></a>
+### 9.0 Connecting with real UR5
 
 Firstly check the machine IP. The IP configured on the robot must have the last digit different.
 
@@ -199,7 +231,8 @@ If you are using velocity control, do not use bring_up. Use ur5_ros_control inst
 roslaunch ur_modern_driver ur5_ros_control.launch robot_ip:=192.168.131.12
 ```
 
-## Contributors
+<a name="10.0"></a>
+### 10.0 Contributors
 
 This work was made possible by the teamwork of the LaR fellows:
 * **Caio Viturino** - [caiobarrosv](https://github.com/caiobarrosv)

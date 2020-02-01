@@ -388,13 +388,13 @@ Visualization Manager:
         base:
           Value: false
         base_link:
-          Value: true
+          Value: false
         ee_link:
           Value: false
         forearm_link:
           Value: false
         grasping_link:
-          Value: true
+          Value: false
         robotiq_85_base_link:
           Value: false
         robotiq_85_left_finger_link:
@@ -426,7 +426,7 @@ Visualization Manager:
         wrist_1_link:
           Value: false
         wrist_2_link:
-          Value: false
+          Value: true
         wrist_3_link:
           Value: false
         ar_marker_0:
@@ -436,7 +436,7 @@ Visualization Manager:
         d435_realsense:
           Value: false
         CAM_support_link:
-          Value: false
+          Value: true
       Marker Scale: 1
       Name: TF
       Show Arrows: true
