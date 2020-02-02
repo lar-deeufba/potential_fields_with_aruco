@@ -1,7 +1,8 @@
 <launch>
 	<arg name="pc_camera_test" default="false" />
 	<arg name="kinect2_test" default="false" />
-	<arg name="fixed" default="true" />
+	<arg name="fixed" default="false" />
+	<arg name="gazebo" default="false" />
 
 	<!-- static_transform_publisher x y z yaw pitch roll frame_id child_frame_id period_in_ms
        -1.8143 is igual to -1.57-0.244346, that is = 90deg + 14deg (support angle)  -->
@@ -18,5 +19,8 @@
 
 	<node if="$(arg fixed)" pkg="tf" type="static_transform_publisher" name="fixed_link_broadcaster"
 	      args="-0.5 -0.1 0.033 -0.6 0.0 0.0 /base_link /ar_marker_0 40" />
+
+	<node if="$(arg gazebo)" pkg="tf" type="static_transform_publisher" name="fixed_link_broadcaster"
+	      args="0.0 0.0 0.0 0.0 1.57 0.0 /CAM_support_link /camera_link 10" />
 
 </launch>

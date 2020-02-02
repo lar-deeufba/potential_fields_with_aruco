@@ -332,7 +332,7 @@ class vel_control(object):
                 return ptFinal, oriAtual, oriFinal, max_error_allowed_pos_z
             except:
                 if not rospy.is_shutdown():
-                    self.stop_robot()
+                    self.home_pos()
                     raw_input("\nWaiting for /ar_marker_0 frame to be available! Press ENTER after /ar_marker_0 shows up.")
                     turn_velocity_controller_on()
                     self.CPA_vel_control(approach)
@@ -350,7 +350,8 @@ class vel_control(object):
             self.pos_z = 0.04 if approach else None
 
         if self.args.gazebo:
-            self.alfa_pos = 4.5 * self.alfa_geral * self.gravity_compensation # Grad step of positioning - Default: 0.5
+            self.alfa_pos = 4.5 * self.alfa_geral * self.gravity_compensation * 0.001 # Grad step of positioning - Default: 0.5
+            self.alfa_rot = 4 * self.alfa_geral * 0.01
 
             if approach:
                 self.alfa_pos = 8 * self.alfa_geral * self.gravity_compensation # Grad step of positioning - Default: 0.5
@@ -441,7 +442,7 @@ def main():
     turn_position_controller_on()
 
     # Calculate joint values equivalent to the HOME position
-    joint_values = get_ik([-0.4, -0.1, 0.4 + 0.15])
+    joint_values = get_ik([-0.4, 0.0, 0.1 + 0.15])
     joint_values_grasp = [2.7503889388487677, -1.3631583069981188, 2.079091014654578, -2.357721461467634, -1.6166076458026515, 1.7685985390922419]
 
     ur5_vel = vel_control(arg, joint_values)

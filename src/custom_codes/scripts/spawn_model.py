@@ -12,10 +12,10 @@ import os
 from os.path import expanduser
 from pathlib import Path
 from tf import TransformListener
+from tf.transformations import quaternion_from_euler
 
 rospack = rospkg.RosPack()
 Home = rospack.get_path('custom_codes')
-# path = Home + '/models/box/custom_box.sdf'
 path = Home + '/models/box/model.sdf'
 
 
@@ -29,8 +29,6 @@ class Moving():
         self.z_model_pose = z_pose
         self.Spawning1 = Spawning1
         self.orientation = oriFinal
-        self.flag = 0
-        self.flag1 = 0
 
     def spawning(self,):
 		with open(path) as f:
@@ -65,10 +63,10 @@ def main():
 
     print "X, Y, Z: ", x_position, y_position, z_position
 
-    tf = TransformListener()
-    tf.waitForTransform("base_link", "ar_marker_0", rospy.Time(), rospy.Duration(2.0))
-    ptFinal, oriFinal = tf.lookupTransform("base_link", "ar_marker_0", rospy.Time(0))
-    print "ptFinal[0]: ", ptFinal[0]
+    # This is the position of the object spawned in gazebo relative to the base_link
+    ptFinal = [-0.5, 0.1, 0.05]
+    oriFinal = quaternion_from_euler(0.0, 0.0, -0.6)
+    
     moving1 = Moving("custom_box", Spawning1, x_position - ptFinal[1], y_position + ptFinal[0], z_position + ptFinal[2], oriFinal)
     moving1.spawning()
 

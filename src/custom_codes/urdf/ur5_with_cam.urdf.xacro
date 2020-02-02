@@ -38,6 +38,14 @@
     <child link="grasping_link"/>
   </joint>
 
+  <!-- This frame is placed in the same position as the box inserted in Gazebo in order to be visualized in RVIZ (just for comparison) -->
+  <link name="reference_link"/>
+  <joint name="reference_frame" type="fixed">
+    <origin xyz="-0.5 0.1 0.05" rpy="0 0 -0.6"/>
+    <parent link="base_link"/>
+    <child link="reference_link"/>
+  </joint>
+
   <!-- CAM SUPPORT CODE -->
 
   <!-- o wrist 2 fica 0.09465 m abaixo de wrist 3 (-0.0445+0.09465)-->

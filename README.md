@@ -27,7 +27,7 @@ Please check the paper for further info: [http://proceedings.science/p/111278]
 <a name="2.0"></a>
 ### 2.0 Required packages - Kinetic Version
 
-- [LAR Gazebo](https://github.com/ericksuzart/lar_gazebo)
+- [LAR Gazebo - Copyright (c) 2019, Erick Suzart Souza. All rights reserved.](https://github.com/ericksuzart/lar_gazebo)
 - [Moveit Kinetic](https://moveit.ros.org/install/)
 - [Moveit Python](https://github.com/mikeferguson/moveit_python)
 - [Robotiq Gripper](https://github.com/crigroup/robotiq)
@@ -69,8 +69,7 @@ rosrun custom_codes command_vel_rviz.py --armarker --OriON
 <a name="4.0"></a>
 ### 4.0 Test Velocity Control with Gazebo and CAM (Gazebo plugin)
 
-> **_NOTE:_**  Gazebo simulation is not working properly due to the lack of gravity compensation controller.
-In other other, velocity controller cannot work well without compensation in Gazebo.
+> **_NOTE:_**  Gazebo simulation is not working properly due to the lack of gravity compensation controller. Velocity controller cannot work well without compensation in Gazebo.
 
 Gazebo simulation is used if the real robot is not available.
 If it is available, please use RVIZ and only RVIZ instead.
@@ -80,12 +79,6 @@ Remember to PLAY the simulation after gazebo starts.
 
 ```
 roslaunch custom_codes APF_project_gazebo.launch
-```
-
-If you don't have a webcam connected, launch this:
-
-```
-rosrun custom_codes tf_nodes.py
 ```
 
 Spawn a sphere model to represent the goal
@@ -101,16 +94,29 @@ The real UR5 has it implemented in its controller. In other words, it is not nec
 rosrun custom_codes change_gazebo_properties.py
 ```
 
+Start rqt_image_view and select /ur5/camera1/image_raw topic to see the image being published
+```
+rqt_image_view
+```
+
+Start the ar_alvar_marker using the webcam topic published by the Gazebo plugin
+
+```
+roslaunch custom_codes gazebo_CAM_alvar.launch
+```
+
+Link the frame published by gazebo_CAM_alvar with the support of the D435 CAM.
+It is done in order to publish fresh tf data when the robot moves (it needs to be further investigated).
+
+```
+roslaunch custom_codes tf_transforms.launch gazebo:=true
+```
+
 Start the command_vel node in order to check if velocity control is working properly (check arguments).
 The following command will turn on orientation control (if desired).
 
 ```
 rosrun custom_codes command_vel_gazebo.py --armarker --OriON --gazebo
-```
-
-Start rqt_image_view and select /ur5/camera1/image_raw topic to see the image being published
-```
-rqt_image_view
 ```
 
 <a name="5.0"></a>

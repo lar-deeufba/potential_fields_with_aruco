@@ -1,12 +1,12 @@
 <?xml version="1.0" ?>
 <launch>
 	<!-- Remember to change the size according to your printed version of the marker -->
-	<arg name="marker_size" default="4.9" />
+	<arg name="marker_size" default="4.6" />
 	<arg name="max_new_marker_error" default="0.08" />
 	<arg name="max_track_error" default="0.2" />
 	<arg name="cam_image_topic" default="/ur5/camera1/image_raw" />
 	<arg name="cam_info_topic" default="/ur5/camera1/camera_info" />
-	<arg name="output_frame" default="/CAM_support_link" />
+	<arg name="output_frame" default="/camera_link" />
 
 	<node name="ar_track_alvar" pkg="ar_track_alvar" type="individualMarkersNoKinect" respawn="false" output="screen">
 		<param name="marker_size"           type="double" value="$(arg marker_size)" />
