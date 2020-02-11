@@ -27,12 +27,13 @@ Please check the paper for further info: [http://proceedings.science/p/111278]
 <a name="2.0"></a>
 ### 2.0 Required packages - Kinetic Version
 
-- [LAR Gazebo - Copyright (c) 2019, Erick Suzart Souza. All rights reserved.](https://github.com/ericksuzart/lar_gazebo)
+- [LaR Gazebo - Copyright (c) 2019, Erick Suzart Souza. All rights reserved.](https://github.com/ericksuzart/lar_gazebo)
 - [MoveIt! Kinetic](https://moveit.ros.org/install/)
 - [MoveIt! Python](https://github.com/mikeferguson/moveit_python)
 - [Robotiq Gripper](https://github.com/crigroup/robotiq)
 - [Universal Robot](https://github.com/ros-industrial/universal_robot)
 - [ur_modern_driver](https://github.com/ros-industrial/ur_modern_driver)
+- [URSim](https://www.universal-robots.com/download/?option=18940) running if you're using the simulated robot
 
 Install any dependencies you might have missed by using this command in catkin_ws folder
 
