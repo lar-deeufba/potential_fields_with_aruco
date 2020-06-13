@@ -1,3 +1,7 @@
+<p align="center">
+<img src="https://user-images.githubusercontent.com/24254286/84560840-f25c1800-ad1d-11ea-974f-d16e4e934518.png" width="200"/>
+</p>
+
 # Project - Artificial Potential Field with ArUco Marker
 
 ------------
